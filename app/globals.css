@@ -37,8 +37,11 @@ button { font-family: inherit; }
 }
 .footer-grid {
   display: grid;
-  grid-template-columns: 1.3fr 1fr 1fr;
-  gap: 32px;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 24px;
+}
+.footer-card {
+  padding: 24px 16px 14px;
 }
 .spring-divider {
   display: flex;
@@ -52,7 +55,13 @@ button { font-family: inherit; }
   .benefits-grid { grid-template-columns: 1fr; }
   .compare-grid { grid-template-columns: 1fr; }
   .steps-grid { grid-template-columns: 1fr; }
-  .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 30px 24px; }
+  .footer-card { padding: 40px 24px 24px; }
+}
+
+@media (max-width: 520px) {
+  .footer-grid { grid-template-columns: 1fr; gap: 26px; }
+  .footer-card { padding: 24px 20px 22px; }
 }
 
 

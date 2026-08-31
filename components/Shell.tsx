@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Calendar, Clock, LayoutGrid, Users, MessageCircle } from "lucide-react";
+import { Calendar, Clock, LayoutGrid, Users, MessageCircle, Home } from "lucide-react";
 import { FONT, FONT_DISPLAY, palette, btnGhost } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ProfilePanel from "./ProfilePanel";
@@ -23,12 +23,13 @@ export default function Shell({ children, session }: { children: ReactNode; sess
 
   const navItems = isAdmin
     ? [
-        { href: "/admin", label: "Panel", icon: LayoutGrid },
+        // { href: "/admin", label: "Panel", icon: LayoutGrid },
+          { href: "/", label: "Inicio", icon: Home },
         { href: "/admin/agenda", label: "Agenda", icon: Calendar },
         { href: "/admin/reservas", label: "Reservas", icon: Users },
       ]
     : [
-        { href: "/", label: "Inicio", icon: Calendar },
+        { href: "/", label: "Inicio", icon: Home },
         { href: "/agenda", label: "Agenda", icon: Calendar },
         { href: "/mis-turnos", label: "Mis clases", icon: Clock },
       ];
@@ -47,7 +48,7 @@ export default function Shell({ children, session }: { children: ReactNode; sess
         <div style={{ display: "flex", alignItems: "center", gap: 28, maxWidth: esPaginaAncha ? 1120 : undefined, margin: esPaginaAncha ? "0 auto" : undefined, width: esPaginaAncha ? "100%" : undefined, justifyContent: esPaginaAncha ? "space-between" : "flex-start" }}>
           <button onClick={() => router.push(isAdmin ? "/admin" : "/")} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 0, background: "none", border: "none", cursor: "pointer" }}>
             <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 19, letterSpacing: 0.5, color: palette.moss, lineHeight: 1 }}>MONTE</span>
-            <span style={{ fontFamily: FONT_DISPLAY, fontStyle: "italic", fontWeight: 500, fontSize: 13, color: palette.inkSoft, lineHeight: 1, marginTop: 2 }}>pilates clásico</span>
+            <span style={{ fontFamily: FONT_DISPLAY, fontStyle: "italic", fontWeight: 500, fontSize: 13, color: palette.inkSoft, lineHeight: 1, marginTop: 2 }}>Pilates Clásico</span>
           </button>
 
           {!session && esPaginaAncha && (

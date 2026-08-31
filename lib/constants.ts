@@ -10,7 +10,7 @@ export const HORARIOS_BASE = ["09:00", "10:00", "11:00", "12:00", "15:00", "16:0
 // CUPO_DEFAULT lugares, no se comparten con otras horas del mismo
 // día). Único lugar de la app donde vive este número, para que la
 // agenda pública y la lógica de reservas nunca queden desincronizadas.
-export const CUPO_DEFAULT = 6;
+export const CUPO_DEFAULT = 4;
 
 // Número de WhatsApp del estudio, en formato internacional sin "+" ni
 // espacios (el que se usa para armar los links wa.me/...).

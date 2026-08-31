@@ -3,12 +3,13 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { logAndWrap } from "@/lib/errors";
+import { toDateOnly } from "@/lib/booking";
 
 // GET /api/admin/blocked-dates -> próximas fechas bloqueadas
 export async function GET() {
   try {
     await requireAdmin();
-    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const hoy = toDateOnly(new Date());
     const bloqueos = await prisma.blockedDate.findMany({
       where: { fecha: { gte: hoy } },
       orderBy: { fecha: "asc" },

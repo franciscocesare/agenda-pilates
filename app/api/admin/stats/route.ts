@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { logAndWrap } from "@/lib/errors";
+import { toDateOnly } from "@/lib/booking";
 import { CUPO_DEFAULT, HORARIOS_BASE } from "@/lib/constants";
 
 export async function GET() {
   try {
     await requireAdmin();
-    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-    const manana = new Date(hoy); manana.setDate(manana.getDate() + 1);
-    const pasadoManana = new Date(manana); pasadoManana.setDate(pasadoManana.getDate() + 1);
+    const hoy = toDateOnly(new Date());
+    const manana = new Date(hoy); manana.setUTCDate(manana.getUTCDate() + 1);
+    const pasadoManana = new Date(manana); pasadoManana.setUTCDate(pasadoManana.getUTCDate() + 1);
 
     const [turnosHoy, turnosManana, reservasActivas, cancelados, usuarios, schedulesHoy, canceladosHoy, bloqueoHoy] = await Promise.all([
       prisma.appointment.count({ where: { fecha: hoy, estado: "CONFIRMADO" } }),
@@ -17,7 +18,7 @@ export async function GET() {
       prisma.appointment.count({ where: { estado: "CONFIRMADO", fecha: { gte: hoy } } }),
       prisma.appointment.count({ where: { estado: "CANCELADO" } }),
       prisma.user.count({ where: { rol: "CLIENTE" } }),
-      prisma.schedule.findMany({ where: { diaSemana: hoy.getDay(), activo: true } }),
+      prisma.schedule.findMany({ where: { diaSemana: hoy.getUTCDay(), activo: true } }),
       prisma.blockedSlot.findMany({ where: { fecha: hoy } }),
       prisma.blockedDate.findUnique({ where: { fecha: hoy } }),
     ]);

@@ -20,10 +20,22 @@ const TX_OPTIONS = {
   maxWait: 10000,
 };
 
-function toDateOnly(d: Date | string) {
-  const date = new Date(d);
-  date.setHours(0, 0, 0, 0);
-  return date;
+/**
+ * Convierte una fecha (Date u string "YYYY-MM-DD") a las 00:00 UTC del
+ * día calendario correspondiente, sin pasar nunca por la zona horaria
+ * local. Evita el bug clásico de JS: un string tipo "2026-09-07" se
+ * parsea como medianoche UTC, pero si después alguien le aplica
+ * .setHours() (que opera en horario LOCAL), en husos horarios
+ * negativos como Argentina (UTC-3) la fecha se corre un día para
+ * atrás — que es justo lo que pasaba acá antes de este fix. A partir
+ * de esta función, toda fecha "solo día" de la app vive en UTC: se
+ * usan getUTCDay/getUTCDate/setUTCDate, nunca los equivalentes locales.
+ */
+export function toDateOnly(d: Date | string): Date {
+  if (typeof d === "string") {
+    return new Date(`${d.slice(0, 10)}T00:00:00.000Z`);
+  }
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
 /**
@@ -44,7 +56,7 @@ async function estaBloqueado(tx: Tx, fecha: Date) {
 }
 
 async function horarioHabilitado(tx: Tx, fecha: Date, hora: string) {
-  const diaSemana = fecha.getDay();
+  const diaSemana = fecha.getUTCDay();
   const schedules = await tx.schedule.findMany({ where: { diaSemana, activo: true } });
   if (schedules.length === 0) return false;
   const dentroDeAlgunaFranja = schedules.some((s) => hora >= s.horaInicio && hora < s.horaFin);
@@ -171,10 +183,10 @@ export async function reservarPlanMensual(
   const fechas: Date[] = [];
   const cursor = toDateOnly(payment.periodoInicio);
   const fin = toDateOnly(payment.periodoFin);
-  while (cursor.getDay() !== diaSemana) cursor.setDate(cursor.getDate() + 1);
+  while (cursor.getUTCDay() !== diaSemana) cursor.setUTCDate(cursor.getUTCDate() + 1);
   while (cursor <= fin) {
     fechas.push(new Date(cursor));
-    cursor.setDate(cursor.getDate() + 7);
+    cursor.setUTCDate(cursor.getUTCDate() + 7);
   }
 
   const recurrente = await prisma.recurringReservation.create({
@@ -286,7 +298,7 @@ async function crearClaseSueltaWalkIn(tx: Tx, userId: string, fecha: Date) {
   if (!planSuelta) throw Errores.sinCreditos();
 
   const periodoFin = new Date(fecha);
-  periodoFin.setDate(periodoFin.getDate() + (planSuelta.duracionDias ?? 30));
+  periodoFin.setUTCDate(periodoFin.getUTCDate() + (planSuelta.duracionDias ?? 30));
 
   return tx.payment.create({
     data: {

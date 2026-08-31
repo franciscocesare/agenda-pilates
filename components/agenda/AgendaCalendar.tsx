@@ -93,7 +93,7 @@ export default function AgendaCalendar() {
                             padding: "8px 12px", borderRadius: 999, whiteSpace: "nowrap",
                           }}
                         >
-                          <MessageCircle size={15} /> Pedí este lugar
+                          Solicitar
                         </a>
                       ) : (
                         <span style={{ fontSize: 12, fontWeight: 700, color: palette.danger, background: palette.dangerSoft, padding: "6px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>

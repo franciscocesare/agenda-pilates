@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logAndWrap } from "@/lib/errors";
+import { toDateOnly } from "@/lib/booking";
 import { HORARIOS_BASE, CUPO_DEFAULT } from "@/lib/constants";
 
 // GET /api/calendar/day?fecha=YYYY-MM-DD
@@ -13,9 +14,8 @@ export async function GET(req: NextRequest) {
   try {
     const fechaStr = req.nextUrl.searchParams.get("fecha");
     if (!fechaStr) return NextResponse.json({ error: "Falta la fecha." }, { status: 400 });
-    const fecha = new Date(`${fechaStr}T00:00:00`);
-    fecha.setHours(0, 0, 0, 0);
-    const diaSemana = fecha.getDay();
+    const fecha = toDateOnly(fechaStr);
+    const diaSemana = fecha.getUTCDay();
 
     const [schedules, blockedSlots, reservasPorHora] = await Promise.all([
       prisma.schedule.findMany({ where: { diaSemana, activo: true } }),

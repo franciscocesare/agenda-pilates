@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { logAndWrap } from "@/lib/errors";
+import { toDateOnly } from "@/lib/booking";
 
 // GET /api/payments/mine -> mis créditos/planes activos, para decidir
 // si el flujo de reserva ofrece "clase suelta", "día fijo del mes", o
@@ -9,7 +10,7 @@ import { logAndWrap } from "@/lib/errors";
 export async function GET() {
   try {
     const session = await requireSession();
-    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const hoy = toDateOnly(new Date());
 
     const payments = await prisma.payment.findMany({
       where: { userId: session.userId, estado: "CONFIRMADO", periodoFin: { gte: hoy } },

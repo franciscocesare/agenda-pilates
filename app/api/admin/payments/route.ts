@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { logAndWrap } from "@/lib/errors";
+import { toDateOnly } from "@/lib/booking";
 
 // GET /api/admin/payments?userId=...
 // Créditos/planes vigentes de un alumno puntual, para que la profesora
@@ -13,8 +14,7 @@ export async function GET(req: NextRequest) {
     const userId = req.nextUrl.searchParams.get("userId");
     if (!userId) return NextResponse.json({ error: "Falta el alumno." }, { status: 400 });
 
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    const hoy = toDateOnly(new Date());
 
     const payments = await prisma.payment.findMany({
       where: { userId, estado: "CONFIRMADO", periodoFin: { gte: hoy } },

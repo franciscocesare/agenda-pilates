@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logAndWrap } from "@/lib/errors";
+import { toDateOnly } from "@/lib/booking";
 import { CUPO_DEFAULT, HORARIOS_BASE } from "@/lib/constants";
 
 // GET /api/calendar?desde=YYYY-MM-DD&dias=42
@@ -19,11 +20,10 @@ export async function GET(req: NextRequest) {
   try {
     const desdeParam = req.nextUrl.searchParams.get("desde");
     const dias = Math.min(Number(req.nextUrl.searchParams.get("dias") ?? 42), 62);
-    const desde = desdeParam ? new Date(desdeParam) : new Date();
-    desde.setHours(0, 0, 0, 0);
+    const desde = desdeParam ? toDateOnly(desdeParam) : toDateOnly(new Date());
 
     const hasta = new Date(desde);
-    hasta.setDate(hasta.getDate() + dias);
+    hasta.setUTCDate(hasta.getUTCDate() + dias);
 
     const [bloqueos, blockedSlots, schedules, reservasPorHorario] = await Promise.all([
       prisma.blockedDate.findMany({ where: { fecha: { gte: desde, lt: hasta } } }),
@@ -60,9 +60,9 @@ export async function GET(req: NextRequest) {
     const resultado = [];
     for (let i = 0; i < dias; i++) {
       const fecha = new Date(desde);
-      fecha.setDate(fecha.getDate() + i);
+      fecha.setUTCDate(fecha.getUTCDate() + i);
       const key = fecha.toISOString().slice(0, 10);
-      const weekday = fecha.getDay();
+      const weekday = fecha.getUTCDay();
 
       const motivo = bloqueoPorFecha.get(key);
       const franjas = schedulesPorDia.get(weekday) ?? [];
