@@ -296,7 +296,7 @@ export default function Home() {
           </div>
         </div>
       </footer>
-       <p style={{ fontSize: 12, color: palette.inkSoft, textAlign: "center" }}>© {new Date().getFullYear()} Monte Pilates, Códoba - Argentina</p>
+       <p style={{ fontSize: 12, color: palette.inkSoft, textAlign: "center" }}>© {new Date().getFullYear()} Monte Pilates - Valle de Calamuchita, Córdoba - Argentina</p>
     </div>
   );
 }

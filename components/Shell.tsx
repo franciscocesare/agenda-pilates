@@ -46,7 +46,7 @@ export default function Shell({ children, session }: { children: ReactNode; sess
           position: "sticky", top: 0, zIndex: 20,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 28, maxWidth: esPaginaAncha ? 1120 : undefined, margin: esPaginaAncha ? "0 auto" : undefined, width: esPaginaAncha ? "100%" : undefined, justifyContent: esPaginaAncha ? "space-between" : "flex-start" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 28, maxWidth: esPaginaAncha ? 1120 : undefined, margin: esPaginaAncha ? "0 auto" : undefined, width: esPaginaAncha ? "100%" : undefined, justifyContent: "space-between"}}>
           <button onClick={() => router.push(isAdmin ? "/admin" : "/")} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 0, background: "none", border: "none", cursor: "pointer" }}>
             <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 19, letterSpacing: 0.5, color: palette.moss, lineHeight: 1 }}>MONTE</span>
             <span style={{ fontFamily: FONT_DISPLAY, fontStyle: "italic", fontWeight: 500, fontSize: 13, color: palette.inkSoft, lineHeight: 1, marginTop: 2 }}>Pilates Clásico</span>
