@@ -265,7 +265,7 @@ export default function Home() {
           }}
         >
           <svg viewBox="0 0 400 60" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 60, opacity: 0.4 }} preserveAspectRatio="none" aria-hidden="true">
-            <path d="M0 30 Q100 5 200 30 T400 30" stroke="rgba(228, 137, 137, 0.15)" strokeWidth="1.5" fill="none" />
+            <path d="M0 30 Q100 5 200 30 T400 30" stroke= "rgba(255, 255, 255, 0.22)" strokeWidth="1" fill="none" />
           </svg>
             {/* Marca */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 12, gap: 4 }}>
@@ -274,7 +274,7 @@ export default function Home() {
             </div>
           <div 
             style={{
-              position: "relative", paddingTop: 22, borderTop: "1px solid rgba(255, 255, 255, 0.22)",
+              position: "relative", paddingTop: 18, borderTop: "1px solid rgba(255, 255, 255, 0.22)",
               display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8,
             }}
           >  
@@ -288,7 +288,7 @@ export default function Home() {
             href="https://maps.app.goo.gl/sz1yhPngBS4qqMay8"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ display: "flex", gap: 4, alignItems: "flex-start", fontSize: 14, color: palette.bg, lineHeight: 1.6, margin: "0 0 8px", textDecoration: "none" }}
+            style={{ display: "flex", gap: 4, alignItems: "flex-start", fontSize: 14, color: palette.bg, lineHeight: 1.6, textDecoration: "none" }}
           >
             <MapPin size={16} color={palette.bg} style={{ flexShrink: 0, marginTop: 2 }} />
             Bv. Los Reartes 705, Villa Ciudad Parque.
