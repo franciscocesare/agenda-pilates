@@ -6,6 +6,7 @@ import { Calendar, Clock, LayoutGrid, Users, MessageCircle, Home } from "lucide-
 import { FONT, FONT_DISPLAY, palette, btnGhost } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ProfilePanel from "./ProfilePanel";
+import { WhatsAppIcon } from "./WhatsAppIcon";
 
 type Sesion = { id: string; nombre: string; apellido: string; rol: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null } | null;
 
@@ -96,11 +97,12 @@ export default function Shell({ children, session }: { children: ReactNode; sess
           style={{
             position: "fixed", right: 18, bottom: session ? 92 : 22, zIndex: 30,
             width: 56, height: 56, borderRadius: "50%", background: "#25D366",
+            borderColor: palette.line, borderWidth: 1.5, borderStyle: "solid",
             display: "flex", alignItems: "center", justifyContent: "center",
             boxShadow: "0 6px 20px rgba(0,0,0,0.25)", color: "#fff",
           }}
         >
-          <MessageCircle size={26} />
+          <WhatsAppIcon size={32} color="#fff" />
         </a>
       )}
 
