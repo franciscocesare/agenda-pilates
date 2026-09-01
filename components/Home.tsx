@@ -1,13 +1,16 @@
 "use client";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRight, MessageCircle, MapPin, Target, Award, Users2, CalendarCheck,
+  ArrowRight, MapPin, Target, Award, Users2, CalendarCheck,
   CalendarDaysIcon,
   UserCheck2,
   Clock,
+  Instagram,
 } from "lucide-react";
 import { FONT_DISPLAY, palette, btnPrimary, btnSecondary, card } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
+import { InstagramIcon } from "./InstagramIcon";
+import { WhatsAppIcon } from "./WhatsAppIcon";
 
 const waHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
   "¡Hola! Quiero consultar por las clases de Monte Pilates 🌿"
@@ -102,9 +105,6 @@ export default function Home() {
             <button style={{ ...btnPrimary, width: "auto", padding: "16px 26px" }} onClick={() => router.push("/agenda")}>
               Ver la agenda <ArrowRight size={18} />
             </button>
-            {/* <a href={waHref} target="_blank" rel="noopener noreferrer" style={{ ...btnSecondary, width: "auto", padding: "16px 26px", display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-              <MessageCircle size={18} color="#25D366" /> Escribinos
-            </a> */}
           </div>
           <div style={{ marginTop: 34 }}>
             <SpringDivider />
@@ -260,28 +260,31 @@ export default function Home() {
         <div
           className="footer-card"
           style={{
-            borderRadius: 28, position: "relative", overflow: "hidden",
-            background: `linear-gradient(160deg, ${palette.mossDark} 0%, ${palette.moss} 100%)`, color: "#fff",
+            borderRadius: 8, position: "relative", overflow: "hidden",
+            background: `${palette.moss}E6`, color: "#fff",
           }}
         >
           <svg viewBox="0 0 400 60" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 60, opacity: 0.4 }} preserveAspectRatio="none" aria-hidden="true">
-            <path d="M0 30 Q100 5 200 30 T400 30" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="1.5" fill="none" />
+            <path d="M0 30 Q100 5 200 30 T400 30" stroke="rgba(228, 137, 137, 0.15)" strokeWidth="1.5" fill="none" />
           </svg>
             {/* Marca */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 12, gap: 4 }}>
               <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 21, letterSpacing: 0.5 }}>MONTE</span>
               <span style={{ fontFamily: FONT_DISPLAY, fontStyle: "italic", fontSize: 14, color: palette.bg}}>Pilates, método clásico</span>
             </div>
-          <div
+          <div 
             style={{
               position: "relative", paddingTop: 22, borderTop: "1px solid rgba(255, 255, 255, 0.22)",
               display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8,
             }}
-          >
+          >  
                <a href={waHref} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
-            <MessageCircle size={16} color="#25D366" /> 3546 567-378
-          </a>
-              <a
+            <WhatsAppIcon size={16} /> 3546 567-378
+          </a> 
+          <a href="https://www.instagram.com/monte.pilates" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
+            <InstagramIcon size={16} color={palette.bg} fillColor={palette.clay} /> monte.pilates
+          </a> {/*whatsapp icon*/}
+              <a 
             href="https://maps.app.goo.gl/sz1yhPngBS4qqMay8"
             target="_blank"
             rel="noopener noreferrer"
@@ -289,7 +292,7 @@ export default function Home() {
           >
             <MapPin size={16} color={palette.bg} style={{ flexShrink: 0, marginTop: 2 }} />
             Bv. Los Reartes 705, Villa Ciudad Parque.
-          </a>
+          </a> 
           </div>
         </div>
       </footer>
