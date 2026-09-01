@@ -184,12 +184,13 @@ export default function Home() {
           <div>
             <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Quiénes somos</p>
             <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: "0 0 18px" }}>
-              Un estudio chico, hecho para hacer las cosas bien.
+              Un estudio chico, pensado para hacer las cosas bien.
             </h2>
           </div>
           <div>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: palette.ink, margin: "0 0 16px" }}>
               Monte Pilates nace en Villa Ciudad Parque con una idea simple: enseñar el método de Pilates tal como fue creado, con aparatos originales y grupos reducidos, en un lugar donde el entorno también forma parte de la clase.
+              Mi nombre es Mariana Olivares y soy la instructora a cargo, me forme en la UNA en Buenos Aires y en el estudio de Joseph Pilates en Nueva York. Llevo más de 10 años enseñando el método clásico, y me apasiona que cada alumna pueda progresar a su ritmo, con seguridad y precisión.
             </p>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: palette.inkSoft, margin: 0 }}>
               No damos clases masivas ni mezclamos disciplinas. Cada alumna tiene su progresión, su nivel y su seguimiento — la profesora conoce tu cuerpo, no solo tu nombre en una lista.
