@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, EyeOff, Eye } from "lucide-react";
 import { FONT_DISPLAY, palette, btnPrimary, card } from "../ui";
 import { Field } from "../Field";
 import ErrorBanner from "../ErrorBanner";
@@ -13,6 +13,8 @@ export default function LoginForm() {
   const [password, setPassword] = useState("Demo1234");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
 
   const submit = async () => {
     setLoading(true);
@@ -40,12 +42,44 @@ export default function LoginForm() {
             <input style={{ ...inputStyle, paddingLeft: 40 }} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nombre@correo.com" />
           </div>
         </Field>
-        <Field label="Contraseña">
-          <div style={{ position: "relative" }}>
-            <Lock size={17} color={palette.inkSoft} style={{ position: "absolute", left: 13, top: 14 }} />
-            <input style={{ ...inputStyle, paddingLeft: 40 }} type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
-        </Field>
+       <Field label="Contraseña">
+  <div style={{ position: "relative" }}>
+    {/* Icono del candado a la izquierda */}
+    <Lock size={17} color={palette.inkSoft} style={{ position: "absolute", left: 13, top: 14 }} />
+    
+    {/* Input: Cambia dinámicamente entre 'password' y 'text' */}
+    <input 
+      style={{ ...inputStyle, paddingLeft: 40, paddingRight: 40 }} // Añadido paddingRight para que el texto no tape el ojo
+      type={showPassword ? "text" : "password"} 
+      value={password} 
+      onChange={(e) => setPassword(e.target.value)} 
+    />
+
+    {/* Botón del ojo a la derecha */}
+    <button
+      type="button" // Importante para que no envíe el formulario por accidente
+      onClick={() => setShowPassword(!showPassword)}
+      style={{
+        position: "absolute",
+        right: 13,
+        top: 14,
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        padding: 0,
+        display: "flex",
+        alignItems: "center"
+      }}
+    >
+      {showPassword ? (
+        <EyeOff size={17} color={palette.inkSoft} />
+      ) : (
+        <Eye size={17} color={palette.inkSoft} />
+      )}
+    </button>
+  </div>
+</Field>
+
         <button style={{ ...btnPrimary, marginBottom: 14, opacity: loading ? 0.7 : 1 }} disabled={loading} onClick={submit}>
           {loading ? "Ingresando…" : "Ingresar"}
         </button>
