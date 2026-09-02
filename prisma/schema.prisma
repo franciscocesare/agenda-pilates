@@ -1,133 +1,82 @@
-// Monte Pilates — esquema de base de datos
-// PostgreSQL + Prisma
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
-enum Role {
-  CLIENTE
-  ADMIN
-}
-
-enum TipoPlan {
-  SUELTA   // paga por clase (una o varias sueltas, sin día fijo)
-  MENSUAL  // paga por mes y elige día(s) fijos una sola vez
-}
-
-enum EstadoPago {
-  CONFIRMADO
-  PENDIENTE
-  CANCELADO
-}
-
-enum EstadoTurno {
-  // Alguien ya ocupa el lugar (para que no lo tome otra persona) pero
-  // todavía no se confirmó que pagó la clase suelta. No consume
-  // crédito hasta que se confirma el pago.
-  PENDIENTE_PAGO
-  CONFIRMADO
-  CANCELADO
-  COMPLETADO
-  AUSENTE
+  provider  = "postgresql"
 }
 
 model User {
-  id           String   @id @default(cuid())
-  nombre       String
-  apellido     String
-  email        String   @unique
-  telefono     String   @unique
-  passwordHash String
-  rol          Role     @default(CLIENTE)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  payments               Payment[]
-  appointments           Appointment[]
-  recurringReservations  RecurringReservation[]
+  id                    String                 @id @default(cuid())
+  nombre                String
+  apellido              String
+  email                 String                 @unique
+  telefono              String
+  passwordHash          String
+  rol                   Role                   @default(CLIENTE)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  appointments          Appointment[]
+  payments              Payment[]
+  recurringReservations RecurringReservation[]
 }
 
-// Tipo de plan que se puede comprar. Ej:
-// "Clase suelta"        -> SUELTA, clasesIncluidas: 1
-// "Bono 4 clases sueltas" -> SUELTA, clasesIncluidas: 4
-// "Mensual 2x por semana" -> MENSUAL, clasesPorSemana: 2
 model PlanType {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   nombre          String
   tipo            TipoPlan
-  clasesPorSemana Int?     // solo aplica a MENSUAL: cuántos días fijos por semana puede elegir
-  clasesIncluidas Int?     // solo aplica a SUELTA: cuántas clases da este pago
-  duracionDias    Int      @default(30) // vigencia del período, para MENSUAL
-  precio          Decimal  @db.Decimal(10, 2)
-  activo          Boolean  @default(true)
-
-  payments Payment[]
+  clasesPorSemana Int?
+  clasesIncluidas Int?
+  duracionDias    Int       @default(30)
+  precio          Decimal   @db.Decimal(10, 2)
+  activo          Boolean   @default(true)
+  payments        Payment[]
 }
 
-// Cada pago genera un "saldo" de crédito: o bien N clases sueltas para
-// usar cuando quiera, o bien el derecho a un patrón fijo semanal durante
-// el período pagado.
 model Payment {
-  id            String     @id @default(cuid())
-  userId        String
-  user          User       @relation(fields: [userId], references: [id])
-  planTypeId    String
-  planType      PlanType   @relation(fields: [planTypeId], references: [id])
-  monto         Decimal    @db.Decimal(10, 2)
-  fechaPago     DateTime   @default(now())
-  periodoInicio DateTime   @db.Date // desde cuándo vale el crédito
-  periodoFin    DateTime   @db.Date // hasta cuándo vale
-  clasesDisponibles Int    // contador: baja con cada clase suelta consumida
-  estado        EstadoPago @default(CONFIRMADO)
-  createdAt     DateTime   @default(now())
-
-  appointments           Appointment[]
-  recurringReservations  RecurringReservation[]
+  id                    String                 @id @default(cuid())
+  userId                String
+  planTypeId            String
+  monto                 Decimal                @db.Decimal(10, 2)
+  fechaPago             DateTime               @default(now())
+  periodoInicio         DateTime               @db.Date
+  periodoFin            DateTime               @db.Date
+  clasesDisponibles     Int
+  estado                EstadoPago             @default(CONFIRMADO)
+  createdAt             DateTime               @default(now())
+  appointments          Appointment[]
+  planType              PlanType               @relation(fields: [planTypeId], references: [id])
+  user                  User                   @relation(fields: [userId], references: [id])
+  recurringReservations RecurringReservation[]
 }
 
-// El "día fijo" que un usuario con plan MENSUAL eligió UNA vez.
-// A partir de esto se generan los Appointment de cada semana del período.
 model RecurringReservation {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  paymentId  String
-  payment    Payment  @relation(fields: [paymentId], references: [id])
-  diaSemana  Int      // 0 = domingo ... 6 = sábado
-  hora       String   // "10:00"
-  activo     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-
+  id           String        @id @default(cuid())
+  userId       String
+  paymentId    String
+  diaSemana    Int
+  hora         String
+  activo       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
   appointments Appointment[]
+  payment      Payment       @relation(fields: [paymentId], references: [id])
+  user         User          @relation(fields: [userId], references: [id])
 }
 
 model Appointment {
-  id     String      @id @default(cuid())
-  userId String
-  user   User        @relation(fields: [userId], references: [id])
-  fecha  DateTime    @db.Date
-  hora   String
-  estado EstadoTurno @default(CONFIRMADO)
-
-  // de dónde salió el crédito usado para este turno
-  paymentId String?
-  payment   Payment? @relation(fields: [paymentId], references: [id])
-
-  // si vino de un plan mensual con día fijo
+  id                     String                @id @default(cuid())
+  userId                 String
+  fecha                  DateTime              @db.Date
+  hora                   String
+  estado                 EstadoTurno           @default(CONFIRMADO)
+  paymentId              String?
   recurringReservationId String?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  payment                Payment?              @relation(fields: [paymentId], references: [id])
   recurringReservation   RecurringReservation? @relation(fields: [recurringReservationId], references: [id])
+  user                   User                  @relation(fields: [userId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // un mismo usuario no puede tener dos turnos activos en el mismo horario
   @@unique([fecha, hora, userId])
   @@index([fecha, hora])
 }
@@ -146,11 +95,6 @@ model BlockedDate {
   motivo String
 }
 
-// Un horario puntual cancelado por la profesora/admin en un día
-// específico (ej. "el miércoles 10:00 se cancela por falta de
-// alumnas"), sin bloquear el resto del día. Deja de ofrecerse para
-// nuevas reservas y cancela automáticamente lo que ya estuviera
-// confirmado en ese horario, devolviendo créditos.
 model BlockedSlot {
   id        String   @id @default(cuid())
   fecha     DateTime @db.Date
@@ -161,10 +105,32 @@ model BlockedSlot {
   @@unique([fecha, hora])
 }
 
-// Configuración general editable desde el panel admin
-// (cupo_default, horas_minimas_cancelacion, duracion_turno_minutos, etc.)
 model Config {
   id    String @id @default(cuid())
   clave String @unique
   valor String
+}
+
+enum Role {
+  CLIENTE
+  ADMIN
+}
+
+enum TipoPlan {
+  SUELTA
+  MENSUAL
+}
+
+enum EstadoPago {
+  CONFIRMADO
+  PENDIENTE
+  CANCELADO
+}
+
+enum EstadoTurno {
+  PENDIENTE_PAGO
+  CONFIRMADO
+  CANCELADO
+  COMPLETADO
+  AUSENTE
 }
