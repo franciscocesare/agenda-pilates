@@ -168,11 +168,14 @@ className="float-anim"
         <div style={{ display: "inline-block", gridTemplateColumns: "0.9fr 1.1fr", gap: 40, alignItems: "center" }} className="compare-grid">
           <div>
             <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Quiénes somos</p>
+             <Reveal delay={80}>
             <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: "0 0 18px" }}>
               Un estudio chico, pensado para hacer las cosas bien.
             </h2>
+            </Reveal>
           </div>
           <div>
+             <Reveal delay={80}>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: palette.ink, margin: "0 0 16px" }}>
               Monte Pilates nace en Villa Ciudad Parque con una idea simple: enseñar el método de Pilates tal como fue creado, con aparatos originales y grupos reducidos, en un lugar donde el entorno también forma parte de la clase.
               Mi nombre es Mariana Olivares y soy la instructora a cargo, me forme en la UNA en Buenos Aires y en el estudio de Joseph Pilates en Nueva York. Llevo más de 10 años enseñando el método clásico, y me apasiona que cada alumna pueda progresar a su ritmo, con seguridad y precisión.
@@ -180,6 +183,7 @@ className="float-anim"
             <p style={{ fontSize: 16, lineHeight: 1.7, color: palette.inkSoft, margin: 0 }}>
               No damos clases masivas ni mezclamos disciplinas. Cada alumna tiene su progresión, su nivel y su seguimiento — la profesora conoce tu cuerpo, no solo tu nombre en una lista.
             </p>
+            </Reveal>
           </div>
         </div>
         </Reveal>
@@ -189,30 +193,36 @@ className="float-anim"
       <section id="beneficios" className="landing-section" style={{ background: palette.card, borderRadius: 32 }}>
          <Reveal>
         <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto 44px" }}>
+           <Reveal>
           <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Por qué clásico</p>
           <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: "0 0 14px" }}>
             El pilates clásico no es una variante más.
           </h2>
+          </Reveal>
+           <Reveal>
           <p style={{ fontSize: 16, color: palette.inkSoft, lineHeight: 1.6, margin: 0 }}>
             Es el método original — y trabaja distinto al pilates "moderno" que se ve en la mayoría de los gimnasios. 
             Secuencia fija de ~34 ejercicios, en el orden original, Aparatos originales: reformer, cadillac, silla, barril. 
             Foco en respiración, control y precisión del movimiento. Al detalle
           </p>
-        </div>
           </Reveal>
+        </div>
         <div className="benefits-grid">
           {BENEFICIOS.map((b, i) => (
-            <Reveal key={b.titulo} delay={i * 70}>
-            <div className="hover-lift" style={{ ...card, background: palette.bg, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "32px 24px" }}>
+            <Reveal key={b.titulo} delay={i * 90}>
+            <div className="hover-lift" style={{ ...card, height: "100%", background: palette.bg, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "32px 24px" }}>
               <div className="icon-pop" style={{ width: 44, height: 44, borderRadius: 12, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
                 <b.icon size={21} color={palette.moss} />
               </div>
+              <Reveal key={b.titulo} delay={i * 90}>
               <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 8px", color: palette.mossDark }}>{b.titulo}</p>
               <p style={{ fontSize: 14, color: palette.inkSoft, margin: 0, lineHeight: 1.55 }}>{b.texto}</p>
+              </Reveal>
             </div>
             </Reveal>
           ))}
         </div>
+          </Reveal>
       </section>
 
       {/* ---------- CÓMO FUNCIONA / AGENDA CTA ---------- */}
@@ -229,8 +239,8 @@ className="float-anim"
           {PASOS.map((p, i) => (
              <Reveal key={p.titulo} delay={i * 90}>
             <div key={p.titulo} style={{ textAlign: "center" }}>
-              <div className="icon-pop" style={{ width: 54, height: 54, borderRadius: 16, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                <p.icon size={24} color={palette.moss} />
+              <div className="hover-lift" style={{ width: 54, height: 54, borderRadius: 16, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <p.icon className="icon-pop" size={24} color={palette.moss} />
               </div>
               <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 8px", color: palette.mossDark }}>{i + 1}. {p.titulo}</p>
               <p style={{ fontSize: 14, color: palette.inkSoft, margin: 0, lineHeight: 1.55, maxWidth: 280, marginLeft: "auto", marginRight: "auto" }}>{p.texto}</p>
