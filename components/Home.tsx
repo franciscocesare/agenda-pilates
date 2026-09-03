@@ -4,8 +4,6 @@ import {
   ArrowRight, MapPin, Target, Award, Users2, CalendarCheck,
   CalendarDaysIcon,
   UserCheck2,
-  Clock,
-  Instagram,
 } from "lucide-react";
 import { FONT_DISPLAY, palette, btnPrimary, btnSecondary, card } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
@@ -103,8 +101,8 @@ export default function Home() {
             El método original de Joseph Pilates, sin atajos ni modas: la misma secuencia, los mismos aparatos, la misma precisión, ahora en el valle de Calamuchita.
           </p>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <button style={{ ...btnPrimary, width: "auto", padding: "16px 26px" }} onClick={() => router.push("/agenda")}>
-              Ver la agenda <ArrowRight size={18} />
+            <button className="btn-anim" style={{ ...btnPrimary, width: "auto", padding: "16px 26px" }} onClick={() => router.push("/agenda")}>
+              Ver la agenda <ArrowRight className="arrow-nudge" size={18} />
             </button>
           </div>
           <div style={{ marginTop: 34 }}>
@@ -112,6 +110,7 @@ export default function Home() {
           </div>
         </div>
 <div
+className="float-anim"
   style={{
     borderRadius: 28,
     minHeight: 340,
@@ -161,26 +160,11 @@ export default function Home() {
     </p>
   </div>
 </div>
-        {/* <div
-          style={{
-            borderRadius: 28, minHeight: 340, position: "relative", overflow: "hidden",
-            background: `linear-gradient(165deg, ${palette.moss} 0%, ${palette.mossDark} 100%)`,
-            boxShadow: "0 30px 60px -20px rgba(78,51,37,0.45)",
-          }}
-        >
-          <svg viewBox="0 0 400 340" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} preserveAspectRatio="xMidYMax slice">
-            <polygon points="0,340 0,220 90,120 170,210 240,90 320,200 400,150 400,340" fill="rgba(255,255,255,0.06)" />
-            <polygon points="0,340 0,260 120,170 210,250 300,160 400,230 400,340" fill="rgba(255,255,255,0.10)" />
-          </svg> 
-          <div style={{ position: "absolute", left: 24, right: 24, bottom: 24, color: "#fff" }}>
-            <p style={{ fontFamily: FONT_DISPLAY, fontStyle: "italic", fontSize: 20, margin: "0 0 6px" }}>“Contrology is complete coordination of body, mind and spirit.”</p>
-            <p style={{ fontSize: 13, opacity: 0.75, margin: 0 }}>— Joseph Pilates</p>
-          </div>
-        </div> */}
       </section>
 
       {/* ---------- QUIÉNES SOMOS ---------- */}
       <section id="quienes-somos" className="landing-section">
+        <Reveal>
         <div style={{ display: "inline-block", gridTemplateColumns: "0.9fr 1.1fr", gap: 40, alignItems: "center" }} className="compare-grid">
           <div>
             <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Quiénes somos</p>
@@ -198,10 +182,12 @@ export default function Home() {
             </p>
           </div>
         </div>
+        </Reveal>
       </section>
 
       {/* ---------- BENEFICIOS ---------- */}
       <section id="beneficios" className="landing-section" style={{ background: palette.card, borderRadius: 32 }}>
+         <Reveal>
         <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto 44px" }}>
           <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Por qué clásico</p>
           <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: "0 0 14px" }}>
@@ -213,54 +199,62 @@ export default function Home() {
             Foco en respiración, control y precisión del movimiento. Al detalle
           </p>
         </div>
-
+          </Reveal>
         <div className="benefits-grid">
-          {BENEFICIOS.map((b) => (
-            <div key={b.titulo} style={{ ...card, background: palette.bg, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "32px 24px" }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+          {BENEFICIOS.map((b, i) => (
+            <Reveal key={b.titulo} delay={i * 70}>
+            <div className="hover-lift" style={{ ...card, background: palette.bg, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "32px 24px" }}>
+              <div className="icon-pop" style={{ width: 44, height: 44, borderRadius: 12, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
                 <b.icon size={21} color={palette.moss} />
               </div>
               <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 8px", color: palette.mossDark }}>{b.titulo}</p>
               <p style={{ fontSize: 14, color: palette.inkSoft, margin: 0, lineHeight: 1.55 }}>{b.texto}</p>
             </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* ---------- CÓMO FUNCIONA / AGENDA CTA ---------- */}
       <section id="agenda" className="landing-section">
+        <Reveal> 
         <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto 44px" }}>
           <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Cómo funciona</p>
           <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: 0 }}>
             Vos mirás la disponibilidad. Nosotras coordinamos el turno.
           </h2>
         </div>
-
+</Reveal>
         <div className="steps-grid">
           {PASOS.map((p, i) => (
+             <Reveal key={p.titulo} delay={i * 90}>
             <div key={p.titulo} style={{ textAlign: "center" }}>
-              <div style={{ width: 54, height: 54, borderRadius: 16, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <div className="icon-pop" style={{ width: 54, height: 54, borderRadius: 16, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
                 <p.icon size={24} color={palette.moss} />
               </div>
               <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 8px", color: palette.mossDark }}>{i + 1}. {p.titulo}</p>
               <p style={{ fontSize: 14, color: palette.inkSoft, margin: 0, lineHeight: 1.55, maxWidth: 280, marginLeft: "auto", marginRight: "auto" }}>{p.texto}</p>
             </div>
+            </Reveal>
           ))}
         </div>
-
+ <Reveal>
         <div style={{ ...card, marginTop: 48, textAlign: "center", padding: "40px 24px", background: `linear-gradient(180deg, ${palette.moss}E6 0%, ${palette.mossDark}E6 100%)`, border: "none" }}>
           <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 600, color: "#fff", margin: "0 0 10px" }}>¿Hay lugar esta semana?</h3>
           <p style={{ color: "rgba(255,255,255,0.8)", margin: "0 0 24px", fontSize: 15 }}>Mirá el mes completo y en cada dia, los horarios, pedinos el día que te quede mejor.</p>
-          <button style={{ ...btnPrimary, width: "auto", padding: "15px 28px", margin: "0 auto", background: palette.clay }} onClick={() => router.push("/agenda")}>
-            Ver la agenda <ArrowRight size={18} />
+          <button className="btn-anim" style={{ ...btnPrimary, width: "auto", padding: "15px 28px", margin: "0 auto", background: palette.clay }} onClick={() => router.push("/agenda")}>
+            Ver la agenda <ArrowRight className="arrow-nudge" size={18} />
           </button>
         </div>
+        </Reveal>
       </section>
 
       {/* ---------- CONTACTO y FOOTER---------- */}
+      <Reveal>
        <footer id="contacto" className="landing-section" style={{ paddingBottom: 0 }}>
         <div
-          className="footer-card"
+         
+          className="footer-card hover-lift"
           style={{
             borderRadius: 8, position: "relative", overflow: "hidden",
             background: `${palette.moss}E6`, color: "#fff",
@@ -280,13 +274,14 @@ export default function Home() {
               display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8,
             }}
           >  
-               <a href={waHref} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
+               <a href={waHref} target="_blank" rel="noopener noreferrer" className="btn-anim" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
             <WhatsAppIcon size={16} /> 3546 567-378
           </a> 
-          <a href="https://www.instagram.com/monte.pilates" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
+          <a href="https://www.instagram.com/monte.pilates" className="btn-anim" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
             <InstagramIcon size={16} fill={palette.claySoft} /> monte.pilates
           </a> {/*whatsapp icon*/}
               <a 
+            className="link-underline"  
             href="https://maps.app.goo.gl/sz1yhPngBS4qqMay8"
             target="_blank"
             rel="noopener noreferrer"
@@ -298,6 +293,7 @@ export default function Home() {
           </div>
         </div>
       </footer>
+      </Reveal>
        <p style={{ fontSize: 12, color: palette.inkSoft, textAlign: "center" }}>© {new Date().getFullYear()} Monte Pilates - Valle de Calamuchita - Argentina</p>
     </div>
   );
