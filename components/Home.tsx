@@ -283,7 +283,7 @@ export default function Home() {
             <WhatsAppIcon size={16} /> 3546 567-378
           </a> 
           <a href="https://www.instagram.com/monte.pilates" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
-            <InstagramIcon size={16} color={palette.bg} fillColor={palette.clay} /> monte.pilates
+            <InstagramIcon size={16} fill={palette.claySoft} /> monte.pilates
           </a> {/*whatsapp icon*/}
               <a 
             href="https://maps.app.goo.gl/sz1yhPngBS4qqMay8"

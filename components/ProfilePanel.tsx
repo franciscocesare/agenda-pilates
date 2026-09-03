@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { X, MessageCircle, LogOut, Mail, Phone, User } from "lucide-react";
 import { FONT_DISPLAY, palette } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
+import { WhatsAppIcon } from "./WhatsAppIcon";
 
 type Sesion = { id?: string; nombre: string; apellido: string; rol?: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null };
 
@@ -40,7 +41,7 @@ export default function ProfilePanel({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: palette.card, borderRadius: "0 0 0 20px", padding: 22, width: "100%", maxWidth: 340, boxShadow: "-8px 0 30px rgba(0,0,0,0.12)" }}
+        style={{ background: palette.card, borderRadius: "0 0 20px 20px", padding: 22, width: "100%", boxShadow: "-8px 0 30px rgba(0,0,0,0.12)" }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -48,10 +49,10 @@ export default function ProfilePanel({
               {initials}
             </div>
             <div>
-              <p style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 17, margin: 0, color: palette.mossDark }}>{sesion.nombre} {sesion.apellido}</p>
+              <p style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 20, margin: 0, color: palette.mossDark }}>{sesion.nombre} {sesion.apellido}</p>
               {sesion.rol && (
                 <p style={{ fontSize: 12, fontWeight: 700, color: palette.moss, margin: "2px 0 0", textTransform: "uppercase", letterSpacing: 0.4 }}>
-                  {sesion.rol === "ADMIN" ? "Administración" : "Alumna"}
+                  {sesion.rol === "ADMIN" ? "Administración" : ""}
                 </p>
               )}
             </div>
@@ -87,7 +88,7 @@ export default function ProfilePanel({
               background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 14, padding: "12px 16px", borderRadius: 12, marginBottom: 10,
             }}
           >
-            <MessageCircle size={17} /> {escribiendoleAOtraPersona ? `Escribirle a ${sesion.nombre} por WhatsApp` : "Escribir por WhatsApp"}
+            <WhatsAppIcon size={17} color="#fff" /> {escribiendoleAOtraPersona ? `Escribirle a ${sesion.nombre} por WhatsApp` : "Escribir a Monte"}
           </a>
         )}
 

@@ -67,7 +67,7 @@ export default function Shell({ children, session }: { children: ReactNode; sess
               style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", color: palette.inkSoft, fontSize: 14, fontWeight: 600 }}
             >
               <span className="hide-on-mobile" style={{ fontWeight: 700, color: palette.ink }}>{session.nombre}</span>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", color: palette.moss, fontWeight: 700, fontSize: 13 }}>
+              <div style={{ width: 38, height: 38, borderRadius: "50%", background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", color: palette.moss, fontWeight: 700, fontSize: 13 }}>
                 {initials}
               </div>
             </button>

@@ -7,8 +7,9 @@ export const InstagramIcon = ({ size = 24, color = "#E1306C", ...props }) => {
       viewBox="0 0 24 24"
       width={size}
       height={size}
+      fill={props.fill || 'none'}
       stroke={color} // El color se aplica a las líneas
-      strokeWidth="2" // Grosor de la línea
+      strokeWidth="2.5" // Grosor de la línea
       strokeLinecap="round"
       strokeLinejoin="round"
       xmlns="http://w3.org"
