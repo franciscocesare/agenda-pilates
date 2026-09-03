@@ -11,6 +11,7 @@ import { FONT_DISPLAY, palette, btnPrimary, btnSecondary, card } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import { InstagramIcon } from "./InstagramIcon";
 import { WhatsAppIcon } from "./WhatsAppIcon";
+import Reveal from "./Reveal";
 
 const waHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
   "¡Hola! Quiero consultar por las clases de Monte Pilates 🌿"

@@ -61,7 +61,86 @@ button { font-family: inherit; }
 
 @media (max-width: 520px) {
   .footer-grid { grid-template-columns: 1fr; gap: 26px; }
-  .footer-card { padding: 24px 20px 22px; }
+  .footer-card { padding: 36px 20px 22px; }
 }
+
+/* ---------- Animaciones y micro-interacciones ---------- */
+
+/* Por defecto todo es visible y estático; el movimiento se activa
+   solo si el usuario no pidió "reducir movimiento" en su sistema. */
+.reveal { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  .reveal.is-visible { opacity: 1; transform: none; }
+
+  .float-anim { animation: gentle-float 5.5s ease-in-out infinite; }
+  @keyframes gentle-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-9px); }
+  }
+
+  .wa-pulse { animation: wa-pulse 2.6s ease-out infinite; }
+  .wa-pulse:hover { animation-play-state: paused; }
+  @keyframes wa-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5); }
+    70% { box-shadow: 0 0 0 16px rgba(37, 211, 102, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+  }
+}
+
+/* Tarjetas: se levantan un poco al pasar el mouse o al tocarlas (el
+   :active también dispara en mobile, da feedback táctil al tap). */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 34px -14px rgba(46, 33, 22, 0.28);
+}
+.hover-lift:active {
+  transform: translateY(-2px) scale(0.99);
+  transition-duration: 0.1s;
+}
+
+/* Botones: leve elevación + brillo en hover, achique al tocar. */
+.btn-anim {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, filter 0.2s ease;
+}
+.btn-anim:hover { transform: translateY(-2px); filter: brightness(1.06); }
+.btn-anim:active { transform: translateY(0) scale(0.96); filter: brightness(0.98); }
+
+/* Links de texto: subrayado que crece desde la izquierda. */
+.link-underline {
+  position: relative;
+  text-decoration: none !important;
+}
+.link-underline::after {
+  content: "";
+  position: absolute; left: 0; bottom: -3px; width: 0; height: 1.5px;
+  background: currentColor; transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.link-underline:hover::after { width: 100%; }
+
+/* Íconos dentro de una tarjeta con hover: un pequeño "pop". */
+.icon-pop { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.hover-lift:hover .icon-pop { transform: scale(1.12) rotate(-4deg); }
+
+/* Celdas del calendario: feedback táctil al tocar un día habilitado. */
+.day-cell {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.day-cell:not(:disabled):hover { box-shadow: 0 6px 14px -6px rgba(46, 33, 22, 0.22); }
+.day-cell:not(:disabled):active { transform: scale(0.93); }
+
+/* Flechitas dentro de botones/tarjetas: se corren un poco al hacer hover. */
+.arrow-nudge { display: inline-flex; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.btn-anim:hover .arrow-nudge, .hover-lift:hover .arrow-nudge { transform: translateX(4px); }
+
 
 

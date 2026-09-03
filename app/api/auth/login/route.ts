@@ -8,7 +8,7 @@ const schema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
-//Login function
+
 export async function POST(req: NextRequest) {
   try {
     const body = schema.parse(await req.json());

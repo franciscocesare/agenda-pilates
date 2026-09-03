@@ -2,6 +2,7 @@
 import { Fragment, ReactNode, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown, Star } from "lucide-react";
 import { FONT_DISPLAY, palette, card, DIAS } from "../ui";
+import Reveal from "../Reveal";
 
 export type DiaCalendario = { fecha: string; weekday: number; status: string; used: number; total: number; motivo: string | null };
 
@@ -120,6 +121,7 @@ export default function MonthGrid({
                     <button
                       key={key}
                       disabled={!expandible}
+                      className="day-cell"
                       onClick={() => info && expandible && onToggleDay(estaExpandido ? null : info)}
                       style={{
                         minWidth: 0, aspectRatio: "1 / 1", borderRadius: 10, padding: "2px 1px",
@@ -148,9 +150,11 @@ export default function MonthGrid({
               </div>
 
               {expandidoEnEstaSemana && diaExpandido && (
-                <div style={{ margin: "8px 2px 12px", borderRadius: 14, background: palette.bg, border: `1px solid ${palette.line}`, padding: 14 }}>
-                  {renderPanel(diaExpandido)}
-                </div>
+                <Reveal>
+                  <div style={{ margin: "8px 2px 12px", borderRadius: 14, background: palette.bg, border: `1px solid ${palette.line}`, padding: 14 }}>
+                    {renderPanel(diaExpandido)}
+                  </div>
+                </Reveal>
               )}
             </Fragment>
           );

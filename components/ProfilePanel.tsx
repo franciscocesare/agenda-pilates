@@ -94,6 +94,7 @@ export default function ProfilePanel({
 
         {mostrarLogout && (
           <button
+            className="btn-anim"
             onClick={logout}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",

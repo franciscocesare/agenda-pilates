@@ -72,7 +72,7 @@ export default function Shell({ children, session }: { children: ReactNode; sess
               </div>
             </button>
           ) : (
-            <button onClick={() => router.push("/login")} style={btnGhost}>Ingresar</button>
+            <button className="btn-anim"  onClick={() => router.push("/login")} style={btnGhost}>Ingresar</button>
           )}
         </div>
       </header>
