@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const connectionString = process.env.DATABASE_URL;
-console.log('process', process.env.DATABASE_URL);
+
 if (!connectionString) {
   throw new Error("DATABASE_URL no está definida");
 }
