@@ -13,6 +13,7 @@ export default function AgendaCalendar() {
   const router = useRouter();
   const [sesion, setSesion] = useState<Sesion>(null);
   const [misFechas, setMisFechas] = useState<Set<string>>(new Set());
+  const [misHorarios, setMisHorarios] = useState<Set<string>>(new Set());
   const [diaSel, setDiaSel] = useState<DiaCalendario | null>(null);
   const [horarios, setHorarios] = useState<HorarioDia[] | null>(null);
 
@@ -20,8 +21,9 @@ export default function AgendaCalendar() {
     fetch("/api/auth/me").then((r) => r.json()).then((u) => {
       setSesion(u);
       if (u) {
-        fetch("/api/appointments").then((r) => r.json()).then((turnos: { fecha: string }[]) => {
+        fetch("/api/appointments").then((r) => r.json()).then((turnos: { fecha: string; hora: string }[]) => {
           setMisFechas(new Set(turnos.map((t) => t.fecha.slice(0, 10))));
+          setMisHorarios(new Set(turnos.map((t) => `${t.fecha.slice(0, 10)}|${t.hora}`)));
         });
       }
     });
@@ -76,31 +78,38 @@ export default function AgendaCalendar() {
               {horarios?.map((h) => {
                 const quedan = h.total - h.used;
                 const disponible = !h.cancelado && quedan > 0;
+                const esMiClase = misHorarios.has(`${dia.fecha}|${h.hora}`);
                 return (
                   <HorarioRow key={h.hora} hora={h.hora}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: disponible ? palette.moss : palette.inkSoft, whiteSpace: "nowrap" }}>
-                        {h.cancelado ? "" : `Quedan ${quedan} lugar${quedan === 1 ? "" : "es"}`}
+                    {esMiClase ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: palette.clay, background: palette.mossSoft, padding: "6px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>
+                        <Star size={13} color={palette.clay} fill={palette.clay} /> Tu clase
                       </span>
-                      {disponible ? (
-                        <a
-                          href={linkSolicitud(dia.fecha, h.hora)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: "flex", alignItems: "center", gap: 6, textDecoration: "none",
-                            background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 13,
-                            padding: "8px 12px", borderRadius: 999, whiteSpace: "nowrap",
-                          }}
-                        >
-                          Solicitar
-                        </a>
-                      ) : (
-                        <span style={{ fontSize: 12, fontWeight: 700, color: palette.danger, background: palette.dangerSoft, padding: "6px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>
-                          {h.cancelado ? "Cancelado" : "Sin lugar"}
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: disponible ? palette.moss : palette.inkSoft, whiteSpace: "nowrap" }}>
+                          {h.cancelado ? "" : `Quedan ${quedan} lugar${quedan === 1 ? "" : "es"}`}
                         </span>
-                      )}
-                    </div>
+                        {disponible ? (
+                          <a
+                            href={linkSolicitud(dia.fecha, h.hora)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: "flex", alignItems: "center", gap: 6, textDecoration: "none",
+                              background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 13,
+                              padding: "8px 12px", borderRadius: 999, whiteSpace: "nowrap",
+                            }}
+                          >
+                           Pedí este lugar
+                          </a>
+                        ) : (
+                          <span style={{ fontSize: 12, fontWeight: 700, color: palette.danger, background: palette.dangerSoft, padding: "6px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>
+                            {h.cancelado ? "Cancelado" : "Sin lugar"}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </HorarioRow>
                 );
               })}

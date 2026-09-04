@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, Plus, User } from "lucide-react";
 import { FONT_DISPLAY, palette } from "../ui";
 import MonthGrid, { DiaCalendario } from "../agenda/MonthGrid";
 import { HorarioRow, Referencia, HorarioDia } from "../agenda/HorarioRow";
@@ -18,7 +18,7 @@ export default function AdminAgenda() {
     setDiaSel(d);
     setHorarios(null);
     if (!d) return;
-    const res = await fetch(`/api/calendar/day?fecha=${d.fecha}`);
+    const res = await fetch(`/api/admin/calendar-day?fecha=${d.fecha}`);
     const data = await res.json();
     setHorarios(data.horarios);
   };
@@ -41,7 +41,7 @@ export default function AdminAgenda() {
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "8px 0 2px", color: palette.moss }}>Agenda</h1>
         <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>
-          Tocá un día para ver los horarios y asignarle un turno a una alumna. Cada horario tiene 6 lugares propios.
+          Tocá un día para ver quién va en cada horario y asignarle un turno a una alumna. Cada horario tiene 6 lugares propios.
         </p>
       </div>
 
@@ -73,25 +73,50 @@ export default function AdminAgenda() {
                 {horarios?.map((h) => {
                   const quedan = h.total - h.used;
                   const disponible = !h.cancelado && dia.status !== "bloqueado" && quedan > 0;
+                  const alumnas = h.alumnas ?? [];
                   return (
-                    <HorarioRow key={h.hora} hora={h.hora}>
+                    <HorarioRow
+                      key={h.hora}
+                      hora={h.hora}
+                      subrow={
+                        alumnas.length > 0 ? (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {alumnas.map((a, i) => (
+                              <span
+                                key={i}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600,
+                                  color: a.pendiente ? palette.clayDark : palette.ink,
+                                  background: a.pendiente ? palette.claySoft : palette.mossSoft,
+                                  padding: "4px 9px", borderRadius: 999,
+                                }}
+                              >
+                                <User size={11} /> {a.nombre}{a.pendiente ? " · pendiente" : ""}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p style={{ fontSize: 12, color: palette.inkSoft, margin: 0 }}>Sin alumnas anotadas todavía.</p>
+                        )
+                      }
+                    >
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: disponible ? palette.moss : palette.inkSoft, whiteSpace: "nowrap" }}>
-                          {h.cancelado ? "Cancelado" : `Quedan ${quedan} lugar${quedan === 1 ? "" : "es"}`}
+                          {h.cancelado ? "Cancelado" : `${quedan} libre${quedan === 1 ? "" : "s"}`}
                         </span>
-                        <button
-                          onClick={() => elegirHorario(dia.fecha, h.hora)}
-                          disabled={!disponible}
-                          style={{
-                            border: "none", cursor: disponible ? "pointer" : "default", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap",
-                            padding: "8px 12px", borderRadius: 999,
-                            background: disponible ? palette.moss : palette.dangerSoft,
-                            color: disponible ? "#fff" : palette.danger,
-                            opacity: disponible ? 1 : 0.8,
-                          }}
-                        >
-                          {disponible ? "Asignar" : "Sin lugar"}
-                        </button>
+                        {disponible && (
+                          <button
+                            onClick={() => elegirHorario(dia.fecha, h.hora)}
+                            aria-label={`Asignar alumna a las ${h.hora}`}
+                            style={{
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              width: 28, height: 28, borderRadius: "50%", border: "none", cursor: "pointer",
+                              background: palette.moss, color: "#fff", flexShrink: 0,
+                            }}
+                          >
+                            <Plus size={16} />
+                          </button>
+                        )}
                       </div>
                     </HorarioRow>
                   );
