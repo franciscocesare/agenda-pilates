@@ -166,7 +166,7 @@ async function main() {
           nombre: "Alumna",
           apellido: `Demo ${i + 1}`,
           email: `alumna.demo${i + 1}@correo.demo`,
-          telefono: "11 0000 0000",
+          telefono: `11${Math.floor(Math.random() * 10000000)}`,
           passwordHash,
           rol: "CLIENTE",
         },
