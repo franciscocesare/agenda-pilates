@@ -3,7 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
+  
 }
 
 model User {
@@ -11,7 +12,7 @@ model User {
   nombre                String
   apellido              String
   email                 String                 @unique
-  telefono              String
+  telefono              String                 @unique
   passwordHash          String
   rol                   Role                   @default(CLIENTE)
   createdAt             DateTime               @default(now())
