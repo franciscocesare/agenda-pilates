@@ -79,10 +79,10 @@ button { font-family: inherit; }
   }
   .reveal.is-visible { opacity: 1; transform: none; }
 
-  .float-anim { animation: gentle-float 5.5s ease-in-out infinite; }
+  .float-anim { animation: gentle-float 3.5s ease-in-out infinite; }
   @keyframes gentle-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-9px); }
+    0%, 100% { transform: translateY(2px); }
+    50% { transform: translateY(-10px); }
   }
 
   .wa-pulse { animation: wa-pulse 2.6s ease-out infinite; }
