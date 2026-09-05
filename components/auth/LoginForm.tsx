@@ -9,7 +9,7 @@ import { inputStyle } from "../ui";
 
 export default function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("julieta@correo.demo");
+  const [email, setEmail] = useState("admin@montepilates.demo");
   const [password, setPassword] = useState("Demo1234");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -92,7 +92,7 @@ export default function LoginForm() {
         </p>
       </div>
       <p style={{ fontSize: 12, color: palette.inkSoft, textAlign: "center", marginTop: 16 }}>
-        Cuentas de prueba: julieta@correo.demo · martin@correo.demo · admin@montepilates.demo (contraseña Demo1234)
+        Cuentas de prueba: admin@montepilates.demo usuario@montepilates.demo (contraseña Demo1234)
       </p>
     </div>
   );
