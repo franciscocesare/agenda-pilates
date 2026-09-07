@@ -41,7 +41,7 @@ export default function AdminAgenda() {
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "8px 0 2px", color: palette.moss }}>Agenda</h1>
         <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>
-          Tocá un día para ver quién va en cada horario y asignarle un turno a una alumna. Cada horario tiene 6 lugares propios.
+          Tocá un día para ver quién va en cada horario y asignarle un turno a una alumna. Cada horario tiene 4 lugares propios.
         </p>
       </div>
 

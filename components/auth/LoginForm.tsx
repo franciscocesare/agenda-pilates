@@ -9,7 +9,7 @@ import { inputStyle } from "../ui";
 
 export default function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@montepilates.demo");
+  const [email, setEmail] = useState("usuario@montepilates.demo");
   const [password, setPassword] = useState("Demo1234");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
