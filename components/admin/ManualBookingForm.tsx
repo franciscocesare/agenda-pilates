@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Search, X, Wallet, Gift, Repeat, MessageCircle, Check } from "lucide-react";
+import { Search, X, Wallet, Gift, Repeat, MessageCircle, Check, Sparkles } from "lucide-react";
 import { palette, card, btnPrimary, inputStyle, HORARIOS_BASE, DIAS_LARGO } from "../ui";
 import { Field } from "../Field";
 import ErrorBanner from "../ErrorBanner";
@@ -11,6 +11,7 @@ type Credito = {
   id: string; nombre: string; tipo: "SUELTA" | "MENSUAL";
   clasesDisponibles: number; clasesPorSemana: number | null;
   patrones: { diaSemana: number; hora: string }[];
+  esCredito: boolean; vencimiento: string;
 };
 type Modo = "credito" | "mensual" | "cortesia";
 
@@ -60,6 +61,19 @@ export default function ManualBookingForm({
 
   const mensualElegido = creditos.find((c) => c.id === paymentId);
 
+  // Un patrón mensual "activo" es el que ya tiene al menos un día/horario
+  // fijado (si no tiene ninguno todavía, no hay nada que cancelar).
+  const tienePlanMensualActivo = creditos.some((c) => c.tipo === "MENSUAL" && c.patrones.length > 0);
+
+  // Créditos generados por una cancelación a tiempo (no un bono pagado):
+  // se muestran aparte para que el admin sepa que ese lugar ya está
+  // cubierto y no hay que cobrar nada.
+  const creditosPorCancelacion = creditos.filter((c) => c.tipo === "SUELTA" && c.esCredito && c.clasesDisponibles > 0);
+  const totalCreditosPorCancelacion = creditosPorCancelacion.reduce((acc, c) => acc + c.clasesDisponibles, 0);
+  const vencimientoMasProximo = creditosPorCancelacion
+    .map((c) => new Date(c.vencimiento))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+
   const crear = async (pagoConfirmado?: boolean) => {
     if (!usuario) return;
     setLoading(true);
@@ -84,8 +98,10 @@ export default function ManualBookingForm({
   };
 
   const intentarAsignar = () => {
-    // Para "clase suelta" pedimos confirmar el pago antes de guardar,
-    // para no descontar el crédito sin haber cobrado.
+    // Si ya tiene un crédito por cancelación, no hay nada que cobrar:
+    // se descuenta directo. Para "clase suelta" pagada sí pedimos
+    // confirmar el cobro antes de guardar, para no descontarla sin cobrar.
+    if (modo === "credito" && totalCreditosPorCancelacion > 0) { crear(true); return; }
     if (modo === "credito") { setConfirmandoPago(true); return; }
     crear();
   };
@@ -149,16 +165,28 @@ export default function ManualBookingForm({
         )}
       </Field>
 
+      {usuario && totalCreditosPorCancelacion > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, background: palette.claySoft, marginBottom: 14 }}>
+          <Sparkles size={16} color={palette.clayDark} style={{ flexShrink: 0 }} />
+          <p style={{ fontSize: 12.5, color: palette.clayDark, margin: 0, fontWeight: 600 }}>
+            {usuario.nombre} tiene {totalCreditosPorCancelacion === 1 ? "1 crédito disponible" : `${totalCreditosPorCancelacion} créditos disponibles`} por cancelación
+            {vencimientoMasProximo ? ` (vence antes el ${vencimientoMasProximo.toLocaleDateString("es-AR", { day: "numeric", month: "long" })})` : ""}. No hace falta cobrarle esta clase.
+          </p>
+        </div>
+      )}
+
       {usuario && (
         <Field label="¿De dónde sale la clase?">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            <ModoBtn active={modo === "credito"} onClick={() => setModo("credito")} icon={Wallet} label="Clase suelta" />
+            <ModoBtn active={modo === "credito"} onClick={() => setModo("credito")} icon={Wallet} label={totalCreditosPorCancelacion > 0 ? "Usar crédito" : "Clase suelta"} />
             <ModoBtn active={modo === "mensual"} onClick={() => setModo("mensual")} icon={Repeat} label="Día fijo mensual" />
             <ModoBtn active={modo === "cortesia"} onClick={() => setModo("cortesia")} icon={Gift} label="Cortesía" />
           </div>
           {modo === "credito" && (
             <p style={{ fontSize: 12, color: palette.inkSoft, margin: "10px 0 0" }}>
-              {creditos.some((c) => c.tipo === "SUELTA" && c.clasesDisponibles > 0)
+              {totalCreditosPorCancelacion > 0
+                ? "Descuenta 1 de sus créditos por cancelación disponibles. No se genera ningún pago nuevo."
+                : creditos.some((c) => c.tipo === "SUELTA" && c.clasesDisponibles > 0)
                 ? "Descuenta 1 clase de su bono disponible. Te vamos a pedir confirmar el pago antes de guardar."
                 : "Este alumno no tiene clases sueltas cargadas todavía: al confirmar el pago, se le crea la clase suelta en el momento (no hace falta que compre un plan antes)."}
             </p>
@@ -240,6 +268,12 @@ export default function ManualBookingForm({
           sesion={usuario}
           contactoNumero={usuario.telefono}
           mostrarLogout={false}
+          planMensualActivo={tienePlanMensualActivo}
+          onClasesCanceladas={() => {
+            setVerPerfil(false);
+            fetch(`/api/admin/payments?userId=${usuario.id}`).then((r) => r.json()).then(setCreditos);
+            onCreated();
+          }}
           onClose={() => setVerPerfil(false)}
         />
       )}

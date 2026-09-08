@@ -21,6 +21,7 @@ export const Errores = {
   planNoMensual: () => new AppError("Este plan no permite elegir días fijos del mes.", 400),
   diasFijosSuperados: () => new AppError("Ya elegiste todos los días fijos que incluye tu plan.", 400),
   turnoNoEncontrado: () => new AppError("No encontramos ese turno.", 404),
+  sinPlanMensualActivo: () => new AppError("Este alumno no tiene ningún plan mensual activo para dar de baja.", 404),
   cancelacionFueraDePlazo: (horas: number) =>
     new AppError(`Solo se puede cancelar hasta ${horas} horas antes del turno.`, 409),
 };

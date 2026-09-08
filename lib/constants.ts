@@ -15,3 +15,8 @@ export const CUPO_DEFAULT = 4;
 // Número de WhatsApp del estudio, en formato internacional sin "+" ni
 // espacios (el que se usa para armar los links wa.me/...).
 export const WHATSAPP_NUMBER = "3546567378";
+
+// Cuántos días vale un crédito generado por la cancelación a tiempo de
+// un turno, contados desde el momento en que se cancela (no desde el
+// plan original). Pasado ese plazo, el crédito deja de poder usarse.
+export const DIAS_VALIDEZ_CREDITO = 30;

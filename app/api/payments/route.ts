@@ -1,19 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { logAndWrap } from "@/lib/errors";
 import { toDateOnly } from "@/lib/booking";
 
-// GET /api/payments/mine -> mis créditos/planes activos, para decidir
-// si el flujo de reserva ofrece "clase suelta", "día fijo del mes", o
-// mandar a comprar un plan.
-export async function GET() {
+// GET /api/admin/payments?userId=...
+// Créditos/planes vigentes de un alumno puntual, para que la profesora
+// o administración sepa de dónde descontar la clase al asignarle un
+// turno (o si tiene un plan mensual con días fijos por elegir).
+export async function GET(req: NextRequest) {
   try {
-    const session = await requireSession();
+    await requireAdmin();
+    const userId = req.nextUrl.searchParams.get("userId");
+    if (!userId) return NextResponse.json({ error: "Falta el alumno." }, { status: 400 });
+
     const hoy = toDateOnly(new Date());
 
     const payments = await prisma.payment.findMany({
-      where: { userId: session.userId, estado: "CONFIRMADO", periodoFin: { gte: hoy } },
+      where: { userId, estado: "CONFIRMADO", periodoFin: { gte: hoy } },
       include: { planType: true, recurringReservations: { where: { activo: true } } },
       orderBy: { fechaPago: "desc" },
     });
@@ -31,7 +35,7 @@ export async function GET() {
       }))
     );
   } catch (err) {
-    const e = logAndWrap(err, "No pudimos cargar tus planes.");
+    const e = logAndWrap(err, "No pudimos cargar los créditos del alumno.");
     return NextResponse.json({ error: e.userMessage }, { status: e.status });
   }
 }

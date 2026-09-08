@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "./prisma";
 import { Errores } from "./errors";
-import { CUPO_DEFAULT } from "./constants";
+import { CUPO_DEFAULT, DIAS_VALIDEZ_CREDITO } from "./constants";
 
 type Tx = Prisma.TransactionClient;
 
@@ -237,14 +237,13 @@ export async function cancelarTurno(userId: string, appointmentId: string, esAdm
 
     await tx.appointment.update({ where: { id: appointmentId }, data: { estado: "CANCELADO" } });
 
-    // Solo se devuelve el crédito si realmente se había descontado (el
+    // Solo se genera crédito si realmente se había descontado uno (el
     // turno estaba CONFIRMADO). Un turno "pendiente de pago" nunca llegó
-    // a consumir el crédito, así que cancelarlo no debe regalar uno.
+    // a consumir crédito, así que cancelarlo no debe regalar uno. El
+    // crédito nuevo vence a los DIAS_VALIDEZ_CREDITO días desde ahora,
+    // independientemente de cuánto le quedara al pago/plan original.
     if (turno.estado === "CONFIRMADO" && turno.paymentId && !turno.recurringReservationId) {
-      await tx.payment.update({
-        where: { id: turno.paymentId },
-        data: { clasesDisponibles: { increment: 1 } },
-      });
+      await crearCreditoPorCancelacion(tx, turno.userId);
     }
   }, { timeout: 15000, maxWait: 10000 });
 }
@@ -282,6 +281,15 @@ async function buscarCreditoDisponible(tx: Tx, userId: string, fecha: Date) {
   });
 }
 
+async function resolverPlanSuelta(tx: Tx) {
+  const planSuelta = await tx.planType.findFirst({
+    where: { tipo: "SUELTA", activo: true },
+    orderBy: { clasesIncluidas: "asc" }, // preferimos el plan de 1 sola clase si existe
+  });
+  if (!planSuelta) throw Errores.sinCreditos();
+  return planSuelta;
+}
+
 /**
  * Cuando el admin confirma el pago de una clase suelta y el alumno no
  * tenía ningún crédito cargado todavía, esa confirmación ES la venta:
@@ -291,11 +299,7 @@ async function buscarCreditoDisponible(tx: Tx, userId: string, fecha: Date) {
  * su cuenta si llega a cancelar esa clase con anticipación.
  */
 async function crearClaseSueltaWalkIn(tx: Tx, userId: string, fecha: Date) {
-  const planSuelta = await tx.planType.findFirst({
-    where: { tipo: "SUELTA", activo: true },
-    orderBy: { clasesIncluidas: "asc" }, // preferimos el plan de 1 sola clase si existe
-  });
-  if (!planSuelta) throw Errores.sinCreditos();
+  const planSuelta = await resolverPlanSuelta(tx);
 
   const periodoFin = new Date(fecha);
   periodoFin.setUTCDate(periodoFin.getUTCDate() + (planSuelta.duracionDias ?? 30));
@@ -309,6 +313,35 @@ async function crearClaseSueltaWalkIn(tx: Tx, userId: string, fecha: Date) {
       periodoFin,
       clasesDisponibles: 1,
       estado: "CONFIRMADO",
+    },
+  });
+}
+
+/**
+ * Genera 1 crédito por la cancelación a tiempo de un turno: un Payment
+ * de monto 0 marcado `esCredito`, con vencimiento a DIAS_VALIDEZ_CREDITO
+ * días desde HOY (no desde el turno cancelado ni desde el plan
+ * original). Queda con la misma forma que cualquier otro pago de tipo
+ * SUELTA, así que buscarCreditoDisponible/crearClaseSueltaWalkIn lo
+ * encuentran y lo gastan solos —y como suele vencer antes que un bono
+ * comprado, `orderBy periodoFin asc` ya lo prioriza para gastarlo primero.
+ */
+async function crearCreditoPorCancelacion(tx: Tx, userId: string) {
+  const planSuelta = await resolverPlanSuelta(tx);
+  const hoy = toDateOnly(new Date());
+  const vencimiento = new Date(hoy);
+  vencimiento.setUTCDate(vencimiento.getUTCDate() + DIAS_VALIDEZ_CREDITO);
+
+  return tx.payment.create({
+    data: {
+      userId,
+      planTypeId: planSuelta.id,
+      monto: 0,
+      periodoInicio: hoy,
+      periodoFin: vencimiento,
+      clasesDisponibles: 1,
+      estado: "CONFIRMADO",
+      esCredito: true,
     },
   });
 }
@@ -408,9 +441,9 @@ export async function confirmarPagoTurno(appointmentId: string) {
  * miércoles 10:00 se cancela por falta de alumnas"), sin bloquear el
  * resto del día. Deja de ofrecerse para nuevas reservas, y cualquier
  * turno que ya estuviera confirmado o pendiente de pago en ese horario
- * se cancela automáticamente. Si ya se había descontado el crédito
- * (turno CONFIRMADO), se devuelve; los "pendiente de pago" no
- * consumieron crédito, así que solo se liberan.
+ * se cancela automáticamente. Si ya se había descontado un crédito
+ * (turno CONFIRMADO), se genera uno nuevo con 30 días de vigencia; los
+ * "pendiente de pago" no consumieron crédito, así que solo se liberan.
  */
 export async function cancelarHorarioParaTodos(fechaStr: string, hora: string, motivo: string) {
   const fecha = toDateOnly(fechaStr);
@@ -429,10 +462,7 @@ export async function cancelarHorarioParaTodos(fechaStr: string, hora: string, m
     await prisma.$transaction(async (tx) => {
       await tx.appointment.update({ where: { id: turno.id }, data: { estado: "CANCELADO" } });
       if (turno.estado === "CONFIRMADO" && turno.paymentId && !turno.recurringReservationId) {
-        await tx.payment.update({
-          where: { id: turno.paymentId },
-          data: { clasesDisponibles: { increment: 1 } },
-        });
+        await crearCreditoPorCancelacion(tx, turno.userId);
       }
     }, { timeout: 15000, maxWait: 10000 });
   }
@@ -451,4 +481,114 @@ export async function cambiarEstadoTurno(appointmentId: string, estado: "COMPLET
   const turno = await prisma.appointment.findUnique({ where: { id: appointmentId } });
   if (!turno) throw Errores.turnoNoEncontrado();
   return prisma.appointment.update({ where: { id: appointmentId }, data: { estado } });
+}
+
+/** Último día (00:00 UTC) del mes calendario al que pertenece `fecha`. */
+function finDeMesUTC(fecha: Date): Date {
+  return new Date(Date.UTC(fecha.getUTCFullYear(), fecha.getUTCMonth() + 1, 0));
+}
+
+/**
+ * Renovación automática de los planes mensuales con día fijo: para
+ * cada patrón (`RecurringReservation`) activo, genera los turnos del
+ * mes en curso que todavía no existan (idempotente — correrla más de
+ * una vez el mismo mes no duplica nada, cada fecha puntual se salta si
+ * ya estaba reservada) y estira la vigencia del pago asociado hasta
+ * fin de mes, para que el plan siga viéndose "vigente" en los paneles
+ * de alumno/admin sin que el admin tenga que cargar un pago nuevo cada
+ * mes. Pensada para correr una vez al principio de cada mes (ver
+ * /api/cron/renovar-mensuales).
+ *
+ * El sistema NO verifica que el mes esté efectivamente pagado: la
+ * clase queda reservada igual, y es tarea del admin detectar el pago
+ * por fuera (WhatsApp/efectivo/transferencia) y, si no llega, dar de
+ * baja el patrón con cancelarPlanMensualDeAlumno para liberar esos
+ * lugares en la agenda.
+ */
+export async function renovarPlanesMensuales() {
+  const hoy = toDateOnly(new Date());
+  const fin = finDeMesUTC(hoy);
+
+  const patrones = await prisma.recurringReservation.findMany({ where: { activo: true } });
+
+  let turnosCreados = 0;
+  let turnosOmitidos = 0;
+
+  for (const patron of patrones) {
+    const cursor = new Date(hoy);
+    while (cursor.getUTCDay() !== patron.diaSemana) cursor.setUTCDate(cursor.getUTCDate() + 1);
+
+    while (cursor <= fin) {
+      try {
+        await conReintentoDeSerializacion(() =>
+          prisma.$transaction(
+            async (tx) =>
+              reservarEnTransaccion(tx, {
+                userId: patron.userId,
+                fecha: new Date(cursor),
+                hora: patron.hora,
+                paymentId: patron.paymentId,
+                recurringReservationId: patron.id,
+              }),
+            TX_OPTIONS
+          )
+        );
+        turnosCreados++;
+      } catch {
+        // Ya existía ese turno (renovación repetida en el mismo mes) o
+        // el horario puntual está bloqueado/completo: se lo salta y se
+        // sigue con el resto del mes / del resto de los alumnos.
+        turnosOmitidos++;
+      }
+      cursor.setUTCDate(cursor.getUTCDate() + 7);
+    }
+
+    // Estira la vigencia del pago hasta fin de mes para que el plan no
+    // "desaparezca" de /api/payments/mine ni de /api/admin/payments
+    // (ambos filtran por periodoFin >= hoy) mientras siga activo.
+    await prisma.payment.update({
+      where: { id: patron.paymentId },
+      data: { periodoFin: fin },
+    });
+  }
+
+  return { patronesRenovados: patrones.length, turnosCreados, turnosOmitidos };
+}
+
+/**
+ * "Cancelar clases": el admin da de baja el/los patrón(es) de plan
+ * mensual de un alumno (típicamente porque no se detectó el pago del
+ * mes). Desactiva el patrón, así la próxima renovación automática ya
+ * no le genera turnos, y cancela los turnos de hoy en adelante que ya
+ * se hubieran generado (incluye lo que quede del mes en curso). Los
+ * turnos de fechas pasadas quedan intactos como historial. No genera
+ * ningún crédito: un turno de plan mensual nunca descontó un crédito
+ * de clase suelta (ver reservarPlanMensual/renovarPlanesMensuales), así
+ * que no hay nada que devolver.
+ */
+export async function cancelarPlanMensualDeAlumno(userId: string) {
+  const hoy = toDateOnly(new Date());
+
+  const patrones = await prisma.recurringReservation.findMany({ where: { userId, activo: true } });
+  if (patrones.length === 0) throw Errores.sinPlanMensualActivo();
+
+  const patronIds = patrones.map((p) => p.id);
+
+  return prisma.$transaction(async (tx) => {
+    await tx.recurringReservation.updateMany({
+      where: { id: { in: patronIds } },
+      data: { activo: false },
+    });
+
+    const { count: turnosCancelados } = await tx.appointment.updateMany({
+      where: {
+        recurringReservationId: { in: patronIds },
+        estado: { in: ["CONFIRMADO", "PENDIENTE_PAGO"] },
+        fecha: { gte: hoy },
+      },
+      data: { estado: "CANCELADO" },
+    });
+
+    return { patronesDadosDeBaja: patronIds.length, turnosCancelados };
+  }, { timeout: 15000, maxWait: 10000 });
 }

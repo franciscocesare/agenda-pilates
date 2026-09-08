@@ -44,6 +44,11 @@ model Payment {
   periodoFin            DateTime               @db.Date
   clasesDisponibles     Int
   estado                EstadoPago             @default(CONFIRMADO)
+  // true cuando este registro no es una venta sino un crédito generado
+  // por la cancelación a tiempo de un turno (monto 0). periodoFin acá
+  // funciona como la fecha de vencimiento del crédito (30 días desde
+  // que se generó, ver DIAS_VALIDEZ_CREDITO).
+  esCredito             Boolean                @default(false)
   createdAt             DateTime               @default(now())
   appointments          Appointment[]
   planType              PlanType               @relation(fields: [planTypeId], references: [id])

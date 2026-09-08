@@ -1,6 +1,7 @@
 "use client";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, MessageCircle, LogOut, Mail, Phone, User } from "lucide-react";
+import { X, MessageCircle, LogOut, Mail, Phone, User, CalendarX } from "lucide-react";
 import { FONT_DISPLAY, palette } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import { WhatsAppIcon } from "./WhatsAppIcon";
@@ -8,7 +9,7 @@ import { WhatsAppIcon } from "./WhatsAppIcon";
 type Sesion = { id?: string; nombre: string; apellido: string; rol?: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null };
 
 export default function ProfilePanel({
-  sesion, onClose, contactoNumero, mostrarLogout = true,
+  sesion, onClose, contactoNumero, mostrarLogout = true, planMensualActivo = false, onClasesCanceladas,
 }: {
   sesion: Sesion;
   onClose: () => void;
@@ -20,17 +21,43 @@ export default function ProfilePanel({
   contactoNumero?: string | null;
   /** Ocultar "Cerrar sesión" cuando este panel muestra el perfil de OTRA persona (ej. admin viendo a una alumna). */
   mostrarLogout?: boolean;
+  /**
+   * Si este alumno tiene un plan mensual activo, muestra el botón
+   * "Cancelar clases" (solo tiene sentido cuando el admin mira el
+   * perfil de otra persona, junto con `contactoNumero`/`sesion.id`).
+   */
+  planMensualActivo?: boolean;
+  /** Se llama después de dar de baja el plan mensual con éxito. */
+  onClasesCanceladas?: () => void;
 }) {
   const router = useRouter();
   const initials = `${sesion.nombre[0]}${sesion.apellido[0]}`;
   const numeroWa = (contactoNumero || WHATSAPP_NUMBER).replace(/[^\d]/g, "");
   const escribiendoleAOtraPersona = !!contactoNumero;
+  const [confirmando, setConfirmando] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     onClose();
     router.push("/");
     router.refresh();
+  };
+
+  const cancelarClases = async () => {
+    if (!sesion.id) return;
+    setCancelando(true);
+    setError(null);
+    const res = await fetch(`/api/admin/users/${sesion.id}/cancelar-mensual`, { method: "POST" });
+    setCancelando(false);
+    if (!res.ok) {
+      const data = await res.json();
+      setError(data.error);
+      return;
+    }
+    setConfirmando(false);
+    onClasesCanceladas?.();
   };
 
   return (
@@ -92,6 +119,20 @@ export default function ProfilePanel({
           </a>
         )}
 
+        {planMensualActivo && (
+          <button
+            className="btn-anim"
+            onClick={() => setConfirmando(true)}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
+              background: "none", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 14,
+              padding: "12px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10,
+            }}
+          >
+            <CalendarX size={16} /> Cancelar clases
+          </button>
+        )}
+
         {mostrarLogout && (
           <button
             className="btn-anim"
@@ -106,6 +147,36 @@ export default function ProfilePanel({
           </button>
         )}
       </div>
+
+      {confirmando && (
+        <div role="dialog" style={{ position: "fixed", inset: 0, background: "rgba(60,42,32,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 20 }} onClick={(e) => { e.stopPropagation(); if (!cancelando) setConfirmando(false); }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: palette.card, borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 }}>
+            <p style={{ fontWeight: 800, fontSize: 17, margin: "0 0 8px", color: palette.mossDark }}>¿Cancelar las clases mensuales?</p>
+            <p style={{ fontSize: 14, color: palette.inkSoft, margin: "0 0 18px", lineHeight: 1.5 }}>
+              Se da de baja el plan mensual de <strong>{sesion.nombre} {sesion.apellido}</strong>: se cancela lo que quede reservado de acá en adelante (este mes y los siguientes) y esos lugares quedan libres en la agenda. No se puede deshacer.
+            </p>
+            {error && <p style={{ fontSize: 13, color: palette.danger, margin: "0 0 14px" }}>{error}</p>}
+            <button
+              onClick={cancelarClases}
+              disabled={cancelando}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
+                background: palette.danger, color: "#fff", fontWeight: 700, fontSize: 14, border: "none",
+                padding: "13px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10, opacity: cancelando ? 0.7 : 1,
+              }}
+            >
+              {cancelando ? "Cancelando…" : "Sí, cancelar clases"}
+            </button>
+            <button
+              onClick={() => setConfirmando(false)}
+              disabled={cancelando}
+              style={{ width: "100%", background: "none", border: "none", color: palette.inkSoft, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0" }}
+            >
+              Volver
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
