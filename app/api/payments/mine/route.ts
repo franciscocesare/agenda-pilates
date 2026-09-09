@@ -26,7 +26,7 @@ export async function GET() {
         clasesDisponibles: p.clasesDisponibles,
         clasesPorSemana: p.planType.clasesPorSemana,
         patrones: p.recurringReservations.map((r) => ({ diaSemana: r.diaSemana, hora: r.hora })),
-        // esCredito: p.esCredito,
+        esCredito: p.esCredito,
         vencimiento: p.periodoFin,
       }))
     );

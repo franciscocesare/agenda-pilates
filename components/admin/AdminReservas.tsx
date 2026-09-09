@@ -121,8 +121,8 @@ export default function AdminReservas() {
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "8px 0 2px", color: palette.moss }}>Reservas</h1>
-        <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>Buscá a una alumna para revisar sus turnos, o asignale uno nuevo.</p>
+        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "8px 0 2px", color: palette.moss }}>Crear Reservas</h1>
+        <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>Buscá a una alumna para asignarle un turno.</p>
       </div>
 
       {!mostrarForm && (
@@ -144,8 +144,12 @@ export default function AdminReservas() {
         </div>
       )}
 
+     <div style={{ marginBottom: 10 }}>
+        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "2px 0 2px", color: palette.moss }}>Ver Reservas</h1>
+        <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>Buscá a una alumna para revisar sus turnos.</p>
+      </div>
       <div style={{ position: "relative", marginBottom: 16 }}>
-        <Search size={17} color={palette.inkSoft} style={{ position: "absolute", left: 13, top: 14 }} />
+        <Search size={18} color={palette.inkSoft} style={{ position: "absolute", left: 13, top: 14 }} />
         <input
           style={{ ...inputStyle, paddingLeft: 40 }}
           placeholder="Buscar alumna por nombre o teléfono…"
@@ -153,12 +157,11 @@ export default function AdminReservas() {
           onChange={(e) => { setQ(e.target.value); cargar(e.target.value); }}
         />
       </div>
-
-      {!buscado && !mostrarForm && (
+      {/* {!buscado && !mostrarForm && (
         <p style={{ color: palette.inkSoft, fontSize: 13, textAlign: "center", padding: "20px 10px" }}>
           Escribí un nombre o teléfono para ver los turnos de una alumna.
         </p>
-      )}
+      )} */}
 
       {loading && <p style={{ color: palette.inkSoft, textAlign: "center", padding: 20 }}>Buscando…</p>}
       {buscado && !loading && reservas.length === 0 && <p style={{ color: palette.inkSoft, textAlign: "center", padding: 20 }}>No encontramos turnos para esa búsqueda.</p>}

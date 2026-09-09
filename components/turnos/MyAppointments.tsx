@@ -1,16 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarX, MessageCircle } from "lucide-react";
+import { CalendarX, MessageCircle, Sparkles } from "lucide-react";
 import { FONT_DISPLAY, palette, btnPrimary, btnSecondary, btnGhost, card, fmtLarga } from "../ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ErrorBanner from "../ErrorBanner";
 
 type Turno = { id: string; fecha: string; hora: string; estado: string; recurringReservationId: string | null };
+type Credito = { id: string; clasesDisponibles: number; esCredito: boolean; vencimiento: string };
 
 export default function MyAppointments() {
   const router = useRouter();
   const [turnos, setTurnos] = useState<Turno[]>([]);
+  const [creditos, setCreditos] = useState<Credito[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelTarget, setCancelTarget] = useState<Turno | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -18,10 +20,22 @@ export default function MyAppointments() {
 
   const cargar = async () => {
     setLoading(true);
-    const res = await fetch("/api/appointments");
-    setTurnos(await res.json());
+    const [resTurnos, resPagos] = await Promise.all([
+      fetch("/api/appointments"),
+      fetch("/api/payments/mine"),
+    ]);
+    setTurnos(await resTurnos.json());
+    const pagos: Credito[] = await resPagos.json();
+    setCreditos(pagos.filter((p) => p.esCredito && p.clasesDisponibles > 0));
     setLoading(false);
   };
+
+  // "Clases a recuperar": suma de créditos generados por cancelaciones
+  // a tiempo, cada uno vence a los 30 días de haberse generado.
+  const clasesARecuperar = creditos.reduce((acc, c) => acc + c.clasesDisponibles, 0);
+  const proximoVencimiento = creditos
+    .map((c) => new Date(c.vencimiento))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
 
   useEffect(() => { cargar(); }, []);
 
@@ -76,6 +90,22 @@ export default function MyAppointments() {
   return (
     <div>
       <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 600, margin: "8px 0 20px", color: palette.moss }}>Mis clases</h1>
+      {clasesARecuperar > 0 && (
+        <div style={{ ...card, marginBottom: 16, display: "flex", alignItems: "center", gap: 12, background: palette.claySoft, borderColor: palette.clay }}>
+          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Sparkles size={19} color={palette.clayDark} />
+          </div>
+          <div>
+            <p style={{ fontWeight: 800, fontSize: 15, margin: "0 0 2px", color: palette.clayDark }}>
+              {clasesARecuperar === 1 ? "Tenés 1 clase a recuperar" : `Tenés ${clasesARecuperar} clases a recuperar`}
+            </p>
+            <p style={{ fontSize: 12.5, color: palette.inkSoft, margin: 0 }}>
+              Pedile a administración un día por WhatsApp
+              {proximoVencimiento ? ` · vence antes el ${fmtLarga(proximoVencimiento)}` : ""}
+            </p>
+          </div>
+        </div>
+      )}
       {turnos.length === 0 ? (
         <div style={{ ...card, textAlign: "center", padding: 32 }}>
           <p style={{ fontWeight: 700, marginBottom: 8 }}>Todavía no tenés ninguna clase asignada.</p>

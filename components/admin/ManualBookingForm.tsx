@@ -8,11 +8,12 @@ import ProfilePanel from "../ProfilePanel";
 
 type Usuario = { id: string; nombre: string; apellido: string; email: string; telefono: string };
 type Credito = {
-  id: string; nombre: string; tipo: "SUELTA" | "MENSUAL";
+  id: string; nombre: string; tipo: "SUELTA" | "MENSUAL"; planTypeId: string;
   clasesDisponibles: number; clasesPorSemana: number | null;
   patrones: { diaSemana: number; hora: string }[];
   esCredito: boolean; vencimiento: string;
 };
+type PlanCatalogo = { id: string; nombre: string; tipo: "SUELTA" | "MENSUAL"; clasesPorSemana: number | null };
 type Modo = "credito" | "mensual" | "cortesia";
 
 export default function ManualBookingForm({
@@ -31,13 +32,20 @@ export default function ManualBookingForm({
   const [verPerfil, setVerPerfil] = useState(false);
   const [creditos, setCreditos] = useState<Credito[]>([]);
   const [modo, setModo] = useState<Modo>("credito");
-  const [paymentId, setPaymentId] = useState("");
   const [fecha, setFecha] = useState(fechaInicial ?? "");
   const [diaSemana, setDiaSemana] = useState(fechaInicial ? new Date(fechaInicial + "T00:00:00").getDay() || 1 : 1);
   const [hora, setHora] = useState(horaInicial ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmandoPago, setConfirmandoPago] = useState(false);
+  const [planes, setPlanes] = useState<PlanCatalogo[]>([]);
+  const [vendiendo, setVendiendo] = useState(false);
+  const [planTipoId, setPlanTipoId] = useState("");
+  const [confirmandoPlanNuevo, setConfirmandoPlanNuevo] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/plans").then((r) => r.json()).then(setPlanes);
+  }, []);
 
   useEffect(() => {
     if (q.trim().length < 2) { setResultados([]); return; }
@@ -48,18 +56,24 @@ export default function ManualBookingForm({
   }, [q]);
 
   useEffect(() => {
-    if (!usuario) { setCreditos([]); return; }
+    if (!usuario) { setCreditos([]); setPlanTipoId(""); return; }
     fetch(`/api/admin/payments?userId=${usuario.id}`).then((r) => r.json()).then((data: Credito[]) => {
       setCreditos(data);
       const conCredito = data.find((c) => c.tipo === "SUELTA" && c.clasesDisponibles > 0);
       const mensualDisponible = data.find((c) => c.tipo === "MENSUAL" && (c.clasesPorSemana ?? 0) > c.patrones.length);
       if (conCredito) { setModo("credito"); }
-      else if (mensualDisponible) { setModo("mensual"); setPaymentId(mensualDisponible.id); }
+      else if (mensualDisponible) { setModo("mensual"); setPlanTipoId(mensualDisponible.planTypeId); }
       else { setModo("credito"); } // sin crédito cargado: al confirmar el pago se genera como venta de clase suelta
     });
   }, [usuario]);
 
-  const mensualElegido = creditos.find((c) => c.id === paymentId);
+  // El mismo tipo de plan que el elegido en el select, si el alumno ya
+  // lo tiene cargado (con lugar libre o no).
+  const mismoTipoExistente = creditos.find((c) => c.tipo === "MENSUAL" && c.planTypeId === planTipoId);
+  const hayLugarEnMismoTipo = !!mismoTipoExistente && (mismoTipoExistente.clasesPorSemana ?? 0) > mismoTipoExistente.patrones.length;
+  // Cualquier otro plan mensual que el alumno ya tenga (para el aviso).
+  const otroMensualExistente = mismoTipoExistente ?? creditos.find((c) => c.tipo === "MENSUAL");
+  const planElegidoNombre = planes.find((p) => p.id === planTipoId)?.nombre ?? "";
 
   // Un patrón mensual "activo" es el que ya tiene al menos un día/horario
   // fijado (si no tiene ninguno todavía, no hay nada que cancelar).
@@ -82,7 +96,6 @@ export default function ManualBookingForm({
     let body: Record<string, unknown> | null = null;
     if (modo === "credito" && fecha && hora) body = { modo: "credito", userId: usuario.id, fecha, hora, pagoConfirmado: !!pagoConfirmado };
     if (modo === "cortesia" && fecha && hora) body = { modo: "cortesia", userId: usuario.id, fecha, hora };
-    if (modo === "mensual" && paymentId && hora) body = { modo: "mensual", userId: usuario.id, paymentId, diaSemana, hora };
     if (!body) { setLoading(false); return; }
 
     const res = await fetch("/api/admin/reservations", {
@@ -97,7 +110,59 @@ export default function ManualBookingForm({
     onCreated();
   };
 
+  // Fija el día/horario elegidos sobre un plan mensual (paymentId) que
+  // ya existe: puede ser uno que el alumno ya tenía, o uno recién
+  // vendido en resolverYAsignarMensual.
+  const crearDiaMensual = async (paymentIdAUsar: string) => {
+    if (!usuario) return;
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/admin/reservations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ modo: "mensual", userId: usuario.id, paymentId: paymentIdAUsar, diaSemana, hora }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) { setError(data.error); return; }
+    setConfirmandoPlanNuevo(false);
+    onCreated();
+  };
+
+  // Resuelve el select simple de "1/2/3 veces por semana": si el
+  // alumno ya tiene exactamente ese plan con lugar libre, reusa ese
+  // pago y fija el día directo. Si ya tiene ALGÚN plan mensual (el
+  // mismo ya completo, u otro distinto) y todavía no confirmamos,
+  // frena y avisa antes de venderle un plan nuevo. `forzar` es lo que
+  // manda el botón "Sí, agregar igual" del aviso.
+  const resolverYAsignarMensual = async (forzar = false) => {
+    if (!usuario || !planTipoId) return;
+
+    if (hayLugarEnMismoTipo && mismoTipoExistente) {
+      await crearDiaMensual(mismoTipoExistente.id);
+      return;
+    }
+
+    if (otroMensualExistente && !forzar) {
+      setConfirmandoPlanNuevo(true);
+      return;
+    }
+
+    setVendiendo(true);
+    setError(null);
+    const res = await fetch("/api/admin/payments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: usuario.id, planTypeId: planTipoId }),
+    });
+    const data = await res.json();
+    setVendiendo(false);
+    if (!res.ok) { setError(data.error); return; }
+    await crearDiaMensual(data.id);
+  };
+
   const intentarAsignar = () => {
+    if (modo === "mensual") { resolverYAsignarMensual(); return; }
     // Si ya tiene un crédito por cancelación, no hay nada que cobrar:
     // se descuenta directo. Para "clase suelta" pagada sí pedimos
     // confirmar el cobro antes de guardar, para no descontarla sin cobrar.
@@ -117,10 +182,9 @@ export default function ManualBookingForm({
     crear(false);
   };
 
-
   const puedeCrear =
     !!usuario &&
-    ((modo !== "mensual" && !!fecha && !!hora) || (modo === "mensual" && !!paymentId && !!hora));
+    ((modo !== "mensual" && !!fecha && !!hora) || (modo === "mensual" && !!planTipoId && !!hora));
 
   return (
     <div style={{ ...card, marginBottom: 16, position: "relative" }}>
@@ -139,7 +203,7 @@ export default function ManualBookingForm({
               <button onClick={() => setVerPerfil(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "#1ea952", display: "flex", alignItems: "center" }} title="Ver perfil / escribirle por WhatsApp">
                 <MessageCircle size={17} />
               </button>
-              <button onClick={() => { setUsuario(null); setPaymentId(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: palette.moss, fontSize: 13, fontWeight: 700 }}>Cambiar</button>
+              <button onClick={() => { setUsuario(null); setPlanTipoId(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: palette.moss, fontSize: 13, fontWeight: 700 }}>Cambiar</button>
             </div>
           </div>
         ) : (
@@ -199,19 +263,12 @@ export default function ManualBookingForm({
 
       {usuario && modo === "mensual" && (
         <Field label="Plan mensual">
-          {creditos.filter((c) => c.tipo === "MENSUAL").length === 0 ? (
-            <p style={{ fontSize: 13, color: palette.inkSoft, margin: 0 }}>Este alumno no tiene un plan mensual vigente.</p>
-          ) : (
-            <select style={inputStyle} value={paymentId} onChange={(e) => setPaymentId(e.target.value)}>
-              <option value="">Elegí un plan…</option>
-              {creditos.filter((c) => c.tipo === "MENSUAL").map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre} · {c.patrones.length}/{c.clasesPorSemana} días ya fijados</option>
-              ))}
-            </select>
-          )}
-          {mensualElegido && (mensualElegido.clasesPorSemana ?? 0) <= mensualElegido.patrones.length && (
-            <p style={{ fontSize: 12, color: palette.danger, margin: "10px 0 0" }}>Ya se fijaron todos los días de este plan.</p>
-          )}
+          <select style={inputStyle} value={planTipoId} disabled={vendiendo} onChange={(e) => setPlanTipoId(e.target.value)}>
+            <option value="">Elegí cuántas veces por semana…</option>
+            {planes.filter((p) => p.tipo === "MENSUAL").map((p) => (
+              <option key={p.id} value={p.id}>{p.nombre}</option>
+            ))}
+          </select>
         </Field>
       )}
 
@@ -259,8 +316,8 @@ export default function ManualBookingForm({
         </Field>
       )}
 
-      <button style={{ ...btnPrimary, opacity: puedeCrear && !loading ? 1 : 0.6 }} disabled={!puedeCrear || loading} onClick={intentarAsignar}>
-        {loading ? "Asignando…" : "Asignar turno"}
+      <button style={{ ...btnPrimary, opacity: puedeCrear && !loading && !vendiendo ? 1 : 0.6 }} disabled={!puedeCrear || loading || vendiendo} onClick={intentarAsignar}>
+        {vendiendo ? "Vendiendo el plan…" : loading ? "Asignando…" : "Asignar turno"}
       </button>
 
       {verPerfil && usuario && (
@@ -276,6 +333,34 @@ export default function ManualBookingForm({
           }}
           onClose={() => setVerPerfil(false)}
         />
+      )}
+
+      {confirmandoPlanNuevo && usuario && (
+        <div role="dialog" style={{ position: "fixed", inset: 0, background: "rgba(60,42,32,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }} onClick={() => setConfirmandoPlanNuevo(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: palette.card, borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 }}>
+            <p style={{ fontWeight: 800, fontSize: 17, margin: "0 0 8px", color: palette.mossDark }}>Este alumno ya tiene un plan mensual</p>
+            <p style={{ fontSize: 14, color: palette.inkSoft, margin: "0 0 22px", lineHeight: 1.5 }}>
+              <strong>{usuario.nombre} {usuario.apellido}</strong> ya tiene cargado <strong>{otroMensualExistente?.nombre}</strong> ({otroMensualExistente?.patrones.length}/{otroMensualExistente?.clasesPorSemana} días fijados). ¿Querés venderle además el plan <strong>{planElegidoNombre}</strong> y agregarle este día igual?
+            </p>
+            <button
+              onClick={() => resolverYAsignarMensual(true)}
+              disabled={vendiendo || loading}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
+                background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 14, border: "none",
+                padding: "13px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10, opacity: vendiendo || loading ? 0.7 : 1,
+              }}
+            >
+              {vendiendo || loading ? "Guardando…" : "Sí, agregar igual"}
+            </button>
+            <button
+              onClick={() => setConfirmandoPlanNuevo(false)}
+              style={{ width: "100%", background: "none", border: "none", color: palette.inkSoft, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0" }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
       )}
 
       {confirmandoPago && usuario && (
