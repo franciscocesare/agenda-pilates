@@ -22,16 +22,21 @@ export async function GET(req: NextRequest) {
       prisma.blockedSlot.findMany({ where: { fecha } }),
       prisma.appointment.findMany({
         where: { fecha, estado: { in: ["CONFIRMADO", "PENDIENTE_PAGO"] } },
-        select: { hora: true, estado: true, user: { select: { nombre: true, apellido: true } } },
+        select: { hora: true, estado: true, user: { select: { id: true, nombre: true, apellido: true } } },
         orderBy: { user: { nombre: "asc" } },
       }),
     ]);
 
     const canceladas = new Set(blockedSlots.map((b: { hora: string }) => b.hora));
-    const alumnasPorHora = new Map<string, { nombre: string; pendiente: boolean }[]>();
+    const alumnasPorHora = new Map<string, { id: string; nombre: string; nombreCompleto: string; pendiente: boolean }[]>();
     for (const r of reservas) {
       const lista = alumnasPorHora.get(r.hora) ?? [];
-      lista.push({ nombre: `${r.user.nombre} ${r.user.apellido[0]}.`, pendiente: r.estado === "PENDIENTE_PAGO" });
+      lista.push({
+        id: r.user.id,
+        nombre: `${r.user.nombre} ${r.user.apellido[0]}.`,
+        nombreCompleto: `${r.user.nombre} ${r.user.apellido}`,
+        pendiente: r.estado === "PENDIENTE_PAGO",
+      });
       alumnasPorHora.set(r.hora, lista);
     }
 

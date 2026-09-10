@@ -161,12 +161,7 @@ export async function reservarClaseSuelta(userId: string, fechaStr: string, hora
  * del mes). Si algún día puntual ya está completo o bloqueado, esa fecha
  * queda afuera y se informa — el resto de las fechas sí quedan reservadas.
  */
-export async function reservarPlanMensual(
-  userId: string,
-  paymentId: string,
-  diaSemana: number,
-  hora: string
-) {
+async function fijarUnDiaMensual(userId: string, paymentId: string, diaSemana: number, hora: string) {
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
     include: { planType: true },
@@ -174,15 +169,15 @@ export async function reservarPlanMensual(
   if (!payment || payment.userId !== userId) throw Errores.sinCreditos();
   if (payment.planType.tipo !== "MENSUAL") throw Errores.planNoMensual();
 
-  const patronesActuales = await prisma.recurringReservation.count({
-    where: { paymentId, activo: true },
-  });
-  const maximo = payment.planType.clasesPorSemana ?? 1;
-  if (patronesActuales >= maximo) throw Errores.diasFijosSuperados();
-
   const fechas: Date[] = [];
   const cursor = toDateOnly(payment.periodoInicio);
-  const fin = toDateOnly(payment.periodoFin);
+  // Ojo: acá NO se usa payment.periodoFin (que son ~30 días corridos
+  // desde que se vendió el plan y puede meterse en el mes siguiente).
+  // Los turnos de "fijar el día" se generan solo hasta fin del mes
+  // calendario en curso — el mes que viene los genera la renovación
+  // automática (renovarPlanesMensuales), igual que a cualquier otro
+  // patrón ya activo.
+  const fin = finDeMesUTC(cursor);
   while (cursor.getUTCDay() !== diaSemana) cursor.setUTCDate(cursor.getUTCDate() + 1);
   while (cursor <= fin) {
     fechas.push(new Date(cursor));
@@ -219,7 +214,49 @@ export async function reservarPlanMensual(
     }
   }
 
-  return { recurringReservationId: recurrente.id, reservados, noDisponibles };
+  return { diaSemana, hora, recurringReservationId: recurrente.id, reservados, noDisponibles };
+}
+
+/**
+ * Fija de una sola vez TODOS los días/horarios semanales que le faltan
+ * a un plan mensual (ej. un plan de "2 veces por semana" necesita
+ * exactamente 2 pares día+hora). A propósito NO deja fijar menos que
+ * eso: si el admin manda solo 1 día para un plan de 2, se rechaza con
+ * un error claro en vez de dejar el plan "a medias" — así se evita
+ * terminar con, por ejemplo, un plan de 2 veces por semana funcionando
+ * en la práctica como uno de 1 sola vez por un despiste en el panel.
+ * Si el admin necesita cambiar/completar días más adelante, primero
+ * debe darse de baja el/los día(s) existentes (ProfilePanel > Cancelar
+ * clases) y volver a fijarlos todos juntos.
+ */
+export async function reservarPlanMensualCompleto(
+  userId: string,
+  paymentId: string,
+  dias: { diaSemana: number; hora: string }[]
+) {
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    include: { planType: true },
+  });
+  if (!payment || payment.userId !== userId) throw Errores.sinCreditos();
+  if (payment.planType.tipo !== "MENSUAL") throw Errores.planNoMensual();
+
+  const patronesActuales = await prisma.recurringReservation.count({
+    where: { paymentId, activo: true },
+  });
+  const maximo = payment.planType.clasesPorSemana ?? 1;
+  const faltan = maximo - patronesActuales;
+
+  if (dias.length !== faltan) throw Errores.faltanDiasDelPlan(faltan);
+
+  const combinacionesUnicas = new Set(dias.map((d) => `${d.diaSemana}-${d.hora}`));
+  if (combinacionesUnicas.size !== dias.length) throw Errores.diasRepetidos();
+
+  const resultados = [];
+  for (const dia of dias) {
+    resultados.push(await fijarUnDiaMensual(userId, paymentId, dia.diaSemana, dia.hora));
+  }
+  return { patrones: resultados };
 }
 
 export async function cancelarTurno(userId: string, appointmentId: string, esAdmin = false) {
@@ -563,7 +600,7 @@ export async function renovarPlanesMensuales() {
  * se hubieran generado (incluye lo que quede del mes en curso). Los
  * turnos de fechas pasadas quedan intactos como historial. No genera
  * ningún crédito: un turno de plan mensual nunca descontó un crédito
- * de clase suelta (ver reservarPlanMensual/renovarPlanesMensuales), así
+ * de clase suelta (ver reservarPlanMensualCompleto/renovarPlanesMensuales), así
  * que no hay nada que devolver.
  */
 export async function cancelarPlanMensualDeAlumno(userId: string) {

@@ -24,8 +24,8 @@ export default function Shell({ children, session }: { children: ReactNode; sess
 
   const navItems = isAdmin
     ? [
-        // { href: "/admin", label: "Panel", icon: LayoutGrid },
-          { href: "/", label: "Inicio", icon: Home },
+      { href: "/", label: "Web", icon: Home },
+        { href: "/admin", label: "Panel", icon: LayoutGrid },
         { href: "/admin/agenda", label: "Agenda", icon: Calendar },
         { href: "/admin/reservas", label: "Reservas", icon: Users },
       ]

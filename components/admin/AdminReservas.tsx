@@ -10,8 +10,8 @@ type Reserva = {
   user: { nombre: string; apellido: string; telefono: string; email: string };
 };
 
-export default function AdminReservas() {
-  const [q, setQ] = useState("");
+export default function AdminReservas({ alumnoInicial }: { alumnoInicial?: { id: string; nombre: string } }) {
+  const [q, setQ] = useState(alumnoInicial?.nombre ?? "");
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [buscado, setBuscado] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,6 +25,20 @@ export default function AdminReservas() {
   };
 
   useEffect(() => { cargarPendientes(); }, []);
+
+  // Si venimos de tocar el nombre de una alumna en la Agenda, ya
+  // sabemos exactamente quién es (por id) — no hace falta que el
+  // admin escriba nada, mostramos directo sus turnos.
+  useEffect(() => {
+    if (!alumnoInicial) return;
+    setLoading(true);
+    setBuscado(true);
+    fetch(`/api/admin/reservations?userId=${alumnoInicial.id}`).then((r) => r.json()).then((data) => {
+      setReservas(data);
+      setLoading(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alumnoInicial?.id]);
 
   const cargar = async (query: string) => {
     if (query.trim().length < 2) { setReservas([]); setBuscado(false); return; }
@@ -121,8 +135,8 @@ export default function AdminReservas() {
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "8px 0 2px", color: palette.moss }}>Crear Reservas</h1>
-        <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>Buscá a una alumna para asignarle un turno.</p>
+        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "8px 0 2px", color: palette.moss }}>Reservas</h1>
+        <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>Buscá a una alumna para revisar sus turnos, o asignale uno nuevo.</p>
       </div>
 
       {!mostrarForm && (
@@ -144,12 +158,8 @@ export default function AdminReservas() {
         </div>
       )}
 
-     <div style={{ marginBottom: 10 }}>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "2px 0 2px", color: palette.moss }}>Ver Reservas</h1>
-        <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>Buscá a una alumna para revisar sus turnos.</p>
-      </div>
       <div style={{ position: "relative", marginBottom: 16 }}>
-        <Search size={18} color={palette.inkSoft} style={{ position: "absolute", left: 13, top: 14 }} />
+        <Search size={17} color={palette.inkSoft} style={{ position: "absolute", left: 13, top: 14 }} />
         <input
           style={{ ...inputStyle, paddingLeft: 40 }}
           placeholder="Buscar alumna por nombre o teléfono…"
@@ -157,11 +167,12 @@ export default function AdminReservas() {
           onChange={(e) => { setQ(e.target.value); cargar(e.target.value); }}
         />
       </div>
-      {/* {!buscado && !mostrarForm && (
+
+      {!buscado && !mostrarForm && (
         <p style={{ color: palette.inkSoft, fontSize: 13, textAlign: "center", padding: "20px 10px" }}>
           Escribí un nombre o teléfono para ver los turnos de una alumna.
         </p>
-      )} */}
+      )}
 
       {loading && <p style={{ color: palette.inkSoft, textAlign: "center", padding: 20 }}>Buscando…</p>}
       {buscado && !loading && reservas.length === 0 && <p style={{ color: palette.inkSoft, textAlign: "center", padding: 20 }}>No encontramos turnos para esa búsqueda.</p>}

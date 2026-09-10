@@ -20,6 +20,14 @@ export const Errores = {
   sinCreditos: () => new AppError("No hay ningún plan de clase suelta activo configurado. Creá uno en Planes antes de asignar.", 402),
   planNoMensual: () => new AppError("Este plan no permite elegir días fijos del mes.", 400),
   diasFijosSuperados: () => new AppError("Ya elegiste todos los días fijos que incluye tu plan.", 400),
+  faltanDiasDelPlan: (faltan: number) =>
+    new AppError(
+      faltan === 1
+        ? "Elegí el día y horario que falta antes de guardar."
+        : `Este plan necesita ${faltan} días fijos: elegilos todos (día y horario de cada uno) antes de guardar.`,
+      400
+    ),
+  diasRepetidos: () => new AppError("No podés elegir el mismo día y horario dos veces.", 400),
   turnoNoEncontrado: () => new AppError("No encontramos ese turno.", 404),
   alumnoNoEncontrado: () => new AppError("No encontramos ese alumno.", 404),
   sinPlanMensualActivo: () => new AppError("Este alumno no tiene ningún plan mensual activo para dar de baja.", 404),

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Clock, Plus, User } from "lucide-react";
 import { FONT_DISPLAY, palette } from "../ui";
 import MonthGrid, { DiaCalendario } from "../agenda/MonthGrid";
@@ -9,6 +10,7 @@ import BlockedDatesPanel from "./BlockedDatesPanel";
 import CancelSlotPanel from "./CancelSlotPanel";
 
 export default function AdminAgenda() {
+  const router = useRouter();
   const [diaSel, setDiaSel] = useState<DiaCalendario | null>(null);
   const [horarios, setHorarios] = useState<HorarioDia[] | null>(null);
   const [asignando, setAsignando] = useState<{ fecha: string; hora: string } | null>(null);
@@ -82,17 +84,19 @@ export default function AdminAgenda() {
                         alumnas.length > 0 ? (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                             {alumnas.map((a, i) => (
-                              <span
+                              <button
                                 key={i}
+                                onClick={() => router.push(`/admin/reservas?userId=${a.id}&nombre=${encodeURIComponent(a.nombreCompleto)}`)}
+                                title={`Ver reservas de ${a.nombreCompleto}`}
                                 style={{
                                   display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600,
                                   color: a.pendiente ? palette.clayDark : palette.ink,
                                   background: a.pendiente ? palette.claySoft : palette.mossSoft,
-                                  padding: "4px 9px", borderRadius: 999,
+                                  padding: "4px 9px", borderRadius: 999, border: "none", cursor: "pointer",
                                 }}
                               >
                                 <User size={11} /> {a.nombre}{a.pendiente ? " · pendiente" : ""}
-                              </span>
+                              </button>
                             ))}
                           </div>
                         ) : (

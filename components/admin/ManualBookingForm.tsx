@@ -33,8 +33,8 @@ export default function ManualBookingForm({
   const [creditos, setCreditos] = useState<Credito[]>([]);
   const [modo, setModo] = useState<Modo>("credito");
   const [fecha, setFecha] = useState(fechaInicial ?? "");
-  const [diaSemana, setDiaSemana] = useState(fechaInicial ? new Date(fechaInicial + "T00:00:00").getDay() || 1 : 1);
   const [hora, setHora] = useState(horaInicial ?? "");
+  const [diasSeleccionados, setDiasSeleccionados] = useState<{ diaSemana: number | null; hora: string | null }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmandoPago, setConfirmandoPago] = useState(false);
@@ -75,6 +75,31 @@ export default function ManualBookingForm({
   const otroMensualExistente = mismoTipoExistente ?? creditos.find((c) => c.tipo === "MENSUAL");
   const planElegidoNombre = planes.find((p) => p.id === planTipoId)?.nombre ?? "";
 
+  // Cuántos días con horario hay que fijar TODAVÍA. Si vamos a
+  // continuar un plan que el alumno ya tiene (con lugar libre), son
+  // los que le faltan; si vamos a vender un plan nuevo (porque no
+  // tiene este tipo, o porque ya lo completó), son todos los del plan
+  // desde cero — coincide con lo que valida el servidor en cualquiera
+  // de los dos casos.
+  const diasFaltantes =
+    hayLugarEnMismoTipo && mismoTipoExistente
+      ? (mismoTipoExistente.clasesPorSemana ?? 0) - mismoTipoExistente.patrones.length
+      : planes.find((p) => p.id === planTipoId)?.clasesPorSemana ?? 0;
+
+  // Arma (o rearma) la lista de slots vacíos "Día N" cada vez que
+  // cambia el plan elegido o cuántos días le faltan, para que el admin
+  // tenga que completar todos antes de poder guardar.
+  useEffect(() => {
+    setDiasSeleccionados(Array.from({ length: diasFaltantes }, () => ({ diaSemana: null, hora: null })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planTipoId, diasFaltantes]);
+
+  const actualizarSlot = (idx: number, cambios: Partial<{ diaSemana: number; hora: string }>) => {
+    setDiasSeleccionados((prev) => prev.map((d, i) => (i === idx ? { ...d, ...cambios } : d)));
+  };
+
+  const todosLosDiasCompletos = diasFaltantes > 0 && diasSeleccionados.every((d) => d.diaSemana !== null && d.hora);
+
   // Un patrón mensual "activo" es el que ya tiene al menos un día/horario
   // fijado (si no tiene ninguno todavía, no hay nada que cancelar).
   const tienePlanMensualActivo = creditos.some((c) => c.tipo === "MENSUAL" && c.patrones.length > 0);
@@ -110,17 +135,24 @@ export default function ManualBookingForm({
     onCreated();
   };
 
-  // Fija el día/horario elegidos sobre un plan mensual (paymentId) que
-  // ya existe: puede ser uno que el alumno ya tenía, o uno recién
-  // vendido en resolverYAsignarMensual.
-  const crearDiaMensual = async (paymentIdAUsar: string) => {
+  // Fija TODOS los días/horarios elegidos sobre un plan mensual
+  // (paymentId) que ya existe: puede ser uno que el alumno ya tenía, o
+  // uno recién vendido en resolverYAsignarMensual. Se manda todo junto
+  // en una sola llamada: el servidor rechaza el pedido si no viene
+  // exactamente la cantidad de días que le faltan al plan.
+  const crearDiasMensuales = async (paymentIdAUsar: string) => {
     if (!usuario) return;
     setLoading(true);
     setError(null);
     const res = await fetch("/api/admin/reservations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ modo: "mensual", userId: usuario.id, paymentId: paymentIdAUsar, diaSemana, hora }),
+      body: JSON.stringify({
+        modo: "mensual",
+        userId: usuario.id,
+        paymentId: paymentIdAUsar,
+        dias: diasSeleccionados.map((d) => ({ diaSemana: d.diaSemana, hora: d.hora })),
+      }),
     });
     const data = await res.json();
     setLoading(false);
@@ -131,15 +163,16 @@ export default function ManualBookingForm({
 
   // Resuelve el select simple de "1/2/3 veces por semana": si el
   // alumno ya tiene exactamente ese plan con lugar libre, reusa ese
-  // pago y fija el día directo. Si ya tiene ALGÚN plan mensual (el
+  // pago y fija los días directo. Si ya tiene ALGÚN plan mensual (el
   // mismo ya completo, u otro distinto) y todavía no confirmamos,
   // frena y avisa antes de venderle un plan nuevo. `forzar` es lo que
-  // manda el botón "Sí, agregar igual" del aviso.
+  // manda el botón "Sí, agregar igual" del aviso. No deja avanzar en
+  // ningún caso si todavía faltan días/horarios por elegir.
   const resolverYAsignarMensual = async (forzar = false) => {
-    if (!usuario || !planTipoId) return;
+    if (!usuario || !planTipoId || !todosLosDiasCompletos) return;
 
     if (hayLugarEnMismoTipo && mismoTipoExistente) {
-      await crearDiaMensual(mismoTipoExistente.id);
+      await crearDiasMensuales(mismoTipoExistente.id);
       return;
     }
 
@@ -158,7 +191,7 @@ export default function ManualBookingForm({
     const data = await res.json();
     setVendiendo(false);
     if (!res.ok) { setError(data.error); return; }
-    await crearDiaMensual(data.id);
+    await crearDiasMensuales(data.id);
   };
 
   const intentarAsignar = () => {
@@ -184,7 +217,7 @@ export default function ManualBookingForm({
 
   const puedeCrear =
     !!usuario &&
-    ((modo !== "mensual" && !!fecha && !!hora) || (modo === "mensual" && !!planTipoId && !!hora));
+    ((modo !== "mensual" && !!fecha && !!hora) || (modo === "mensual" && !!planTipoId && todosLosDiasCompletos));
 
   return (
     <div style={{ ...card, marginBottom: 16, position: "relative" }}>
@@ -272,31 +305,63 @@ export default function ManualBookingForm({
         </Field>
       )}
 
-      {usuario && modo === "mensual" ? (
-        <Field label="Día de la semana">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-            {[1, 2, 3, 4, 5, 6].map((d) => (
-              <button
-                key={d}
-                onClick={() => setDiaSemana(d)}
-                style={{
-                  padding: "9px 4px", borderRadius: 10, textAlign: "center", cursor: "pointer",
-                  border: `1.5px solid ${diaSemana === d ? palette.moss : palette.line}`,
-                  background: diaSemana === d ? palette.mossSoft : "#fff", fontWeight: 700, fontSize: 13,
-                }}
-              >
-                {DIAS_LARGO[d]}
-              </button>
-            ))}
-          </div>
-        </Field>
-      ) : usuario && (
+      {usuario && modo === "mensual" && planTipoId && diasFaltantes > 0 && (
+        <div style={{ marginBottom: 4 }}>
+          {hayLugarEnMismoTipo && mismoTipoExistente && mismoTipoExistente.patrones.length > 0 && (
+            <p style={{ fontSize: 12.5, color: palette.mossDark, background: palette.mossSoft, borderRadius: 10, padding: "10px 12px", margin: "0 0 10px" }}>
+              Ya tiene fijado: <strong>{mismoTipoExistente.patrones.map((p) => `${DIAS_LARGO[p.diaSemana]} ${p.hora}`).join(", ")}</strong>. Completá {diasFaltantes === 1 ? "el día que falta" : `los ${diasFaltantes} días que faltan`}:
+            </p>
+          )}
+          {diasSeleccionados.map((slot, idx) => (
+            <div key={idx} style={{ padding: 12, borderRadius: 10, background: palette.mossSoft, marginBottom: 10 }}>
+              <p style={{ fontSize: 12, fontWeight: 800, color: palette.mossDark, margin: "0 0 10px", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                Día {idx + 1} de {diasFaltantes}
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
+                {[1, 2, 3, 4, 5, 6].map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => actualizarSlot(idx, { diaSemana: d })}
+                    style={{
+                      padding: "9px 4px", borderRadius: 10, textAlign: "center", cursor: "pointer",
+                      border: `1.5px solid ${slot.diaSemana === d ? palette.moss : palette.line}`,
+                      background: slot.diaSemana === d ? "#fff" : "transparent", fontWeight: 700, fontSize: 13,
+                    }}
+                  >
+                    {DIAS_LARGO[d]}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                {HORARIOS_BASE.map((h) => (
+                  <button
+                    key={h}
+                    onClick={() => actualizarSlot(idx, { hora: h })}
+                    style={{
+                      padding: "9px 4px", borderRadius: 10, textAlign: "center", cursor: "pointer",
+                      border: `1.5px solid ${slot.hora === h ? palette.moss : palette.line}`,
+                      background: slot.hora === h ? "#fff" : "transparent", fontWeight: 700, fontSize: 13,
+                    }}
+                  >
+                    {h}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          {!todosLosDiasCompletos && (
+            <p style={{ fontSize: 12, color: palette.inkSoft, margin: "0 0 10px" }}>Elegí día y horario en cada uno de los {diasFaltantes} bloques para poder guardar.</p>
+          )}
+        </div>
+      )}
+
+      {usuario && modo !== "mensual" && (
         <Field label="Fecha">
           <input style={inputStyle} type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
         </Field>
       )}
 
-      {usuario && (
+      {usuario && modo !== "mensual" && (
         <Field label="Horario">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
             {HORARIOS_BASE.map((h) => (
@@ -315,6 +380,7 @@ export default function ManualBookingForm({
           </div>
         </Field>
       )}
+
 
       <button style={{ ...btnPrimary, opacity: puedeCrear && !loading && !vendiendo ? 1 : 0.6 }} disabled={!puedeCrear || loading || vendiendo} onClick={intentarAsignar}>
         {vendiendo ? "Vendiendo el plan…" : loading ? "Asignando…" : "Asignar turno"}

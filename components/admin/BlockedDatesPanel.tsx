@@ -1,13 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Ban, X, CalendarDays } from "lucide-react";
+import { Ban, X, CalendarDays, Check } from "lucide-react";
 import { palette, card, btnGhost, btnPrimary, inputStyle, fmtLarga } from "../ui";
 import { Field } from "../Field";
 import ErrorBanner from "../ErrorBanner";
 
 type Bloqueo = { id: string; fecha: string; motivo: string };
-
-const ANIO_ACTUAL = new Date().getFullYear();
 
 export default function BlockedDatesPanel() {
   const [bloqueos, setBloqueos] = useState<Bloqueo[]>([]);
@@ -15,31 +13,42 @@ export default function BlockedDatesPanel() {
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [anioImportar, setAnioImportar] = useState(ANIO_ACTUAL);
-  const [importando, setImportando] = useState(false);
-  const [avisoImport, setAvisoImport] = useState<string | null>(null);
+  const [feriadosAuto, setFeriadosAuto] = useState<boolean | null>(null);
+  const [guardandoFeriados, setGuardandoFeriados] = useState(false);
+  const [avisoFeriados, setAvisoFeriados] = useState<string | null>(null);
 
   const cargar = async () => {
     const res = await fetch("/api/admin/blocked-dates");
     setBloqueos(await res.json());
   };
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    cargar();
+    fetch("/api/admin/config/feriados-argentina").then((r) => r.json()).then((d) => setFeriadosAuto(d.activo));
+  }, []);
 
-  const importarFeriados = async () => {
-    setImportando(true);
+  const alternarFeriadosAuto = async () => {
+    const nuevoValor = !feriadosAuto;
+    setGuardandoFeriados(true);
     setError(null);
-    setAvisoImport(null);
-    const res = await fetch("/api/admin/blocked-dates/importar-feriados", {
-      method: "POST",
+    setAvisoFeriados(null);
+    const res = await fetch("/api/admin/config/feriados-argentina", {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ anio: anioImportar }),
+      body: JSON.stringify({ activo: nuevoValor }),
     });
     const data = await res.json();
-    setImportando(false);
+    setGuardandoFeriados(false);
     if (!res.ok) { setError(data.error); return; }
-    setAvisoImport(`Se cargaron ${data.importados} feriados de ${data.anio}.`);
-    cargar();
+    setFeriadosAuto(nuevoValor);
+    if (nuevoValor) {
+      setAvisoFeriados(
+        data.sincronizado
+          ? `Listo — se cargaron los feriados de ${Object.keys(data.anios).join(" y ")}.`
+          : "Quedó activado. No pudimos consultar el calendario en este momento, pero se va a reintentar solo próximamente."
+      );
+      cargar();
+    }
   };
 
   const bloquear = async () => {
@@ -68,26 +77,31 @@ export default function BlockedDatesPanel() {
       <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 14px", color: palette.inkSoft, textTransform: "uppercase", letterSpacing: 0.5 }}>Bloquear un día</p>
       <ErrorBanner message={error} />
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, background: palette.mossSoft, marginBottom: 18 }}>
-        <CalendarDays size={17} color={palette.moss} style={{ flexShrink: 0 }} />
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px", borderRadius: 10, background: palette.mossSoft, marginBottom: 18 }}>
+        <CalendarDays size={17} color={palette.moss} style={{ flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: palette.mossDark, margin: "0 0 6px" }}>Feriados de Argentina</p>
-          <div style={{ display: "flex", gap: 8 }}>
-            <select style={{ ...inputStyle, padding: "8px 10px" }} value={anioImportar} onChange={(e) => setAnioImportar(Number(e.target.value))}>
-              {[ANIO_ACTUAL - 1, ANIO_ACTUAL, ANIO_ACTUAL + 1].map((a) => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
-            <button
-              onClick={importarFeriados}
-              disabled={importando}
-              style={{ background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13, border: "none", borderRadius: 8, padding: "0 14px", cursor: "pointer", opacity: importando ? 0.7 : 1, whiteSpace: "nowrap" }}
+          <div
+            onClick={() => { if (!guardandoFeriados && feriadosAuto !== null) alternarFeriadosAuto(); }}
+            role="checkbox"
+            aria-checked={!!feriadosAuto}
+            style={{ display: "flex", alignItems: "center", gap: 10, cursor: guardandoFeriados || feriadosAuto === null ? "default" : "pointer" }}
+          >
+            <span
+              style={{
+                width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                border: `1.5px solid ${feriadosAuto ? palette.moss : palette.line}`,
+                background: feriadosAuto ? palette.moss : "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center", opacity: guardandoFeriados ? 0.6 : 1,
+              }}
             >
-              {importando ? "Importando…" : "Importar del calendario oficial"}
-            </button>
+              {feriadosAuto && <Check size={13} color="#fff" />}
+            </span>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: palette.mossDark }}>Cargar automáticamente los feriados nacionales de Argentina</span>
           </div>
-          {avisoImport && <p style={{ fontSize: 12.5, color: palette.mossDark, margin: "8px 0 0" }}>{avisoImport}</p>}
-          <p style={{ fontSize: 11.5, color: palette.inkSoft, margin: "6px 0 0" }}>Carga automáticamente los feriados nacionales y días no laborables de ese año. No borra ni pisa los que hayas bloqueado a mano por otro motivo.</p>
+          <p style={{ fontSize: 11.5, color: palette.inkSoft, margin: "8px 0 0" }}>
+            Sincroniza el calendario oficial de feriados y días no laborables una vez al mes (y ya mismo, al activarlo). No borra ni pisa los días que hayas bloqueado a mano por otro motivo. Si lo desactivás, deja de traer feriados nuevos, pero los que ya se cargaron quedan — los podés desbloquear vos abajo si hace falta.
+          </p>
+          {avisoFeriados && <p style={{ fontSize: 12.5, color: palette.mossDark, margin: "8px 0 0", fontWeight: 600 }}>{avisoFeriados}</p>}
         </div>
       </div>
 

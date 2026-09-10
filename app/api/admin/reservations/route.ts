@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { reservarComoAdmin, reservarComoAdminConCredito, reservarComoAdminPendientePago, reservarPlanMensual } from "@/lib/booking";
+import { reservarComoAdmin, reservarComoAdminConCredito, reservarComoAdminPendientePago, reservarPlanMensualCompleto } from "@/lib/booking";
 import { logAndWrap } from "@/lib/errors";
 
 // GET /api/admin/reservations?q=&fecha=&hora=&estado=
@@ -10,16 +10,21 @@ export async function GET(req: NextRequest) {
   try {
     await requireAdmin();
     const q = req.nextUrl.searchParams.get("q") ?? undefined;
+    const userId = req.nextUrl.searchParams.get("userId") ?? undefined;
     const fecha = req.nextUrl.searchParams.get("fecha") ?? undefined;
     const hora = req.nextUrl.searchParams.get("hora") ?? undefined;
     const estado = req.nextUrl.searchParams.get("estado") ?? undefined;
 
     const reservas = await prisma.appointment.findMany({
       where: {
+        ...(userId ? { userId } : {}),
         ...(fecha ? { fecha: new Date(fecha) } : {}),
         ...(hora ? { hora } : {}),
         ...(estado ? { estado: estado as "PENDIENTE_PAGO" | "CONFIRMADO" | "CANCELADO" | "COMPLETADO" | "AUSENTE" } : {}),
-        ...(q
+        // userId es una coincidencia exacta (ej. viene de tocar el
+        // nombre de una alumna en la Agenda) y tiene prioridad sobre
+        // la búsqueda de texto libre por nombre/teléfono/email.
+        ...(q && !userId
           ? {
               user: {
                 OR: [
@@ -56,14 +61,17 @@ const manualSchema = z.discriminatedUnion("modo", [
     hora: z.string().regex(/^\d{2}:\d{2}$/),
     pagoConfirmado: z.boolean(),
   }),
-  // Fija el día/horario semanal de un plan mensual del alumno; genera
-  // automáticamente las clases de ese día para el resto del período pagado.
+  // Fija de una sola vez TODOS los días/horarios semanales que le
+  // faltan a un plan mensual del alumno (ej. un plan de "2 veces por
+  // semana" necesita mandar exactamente 2). Genera automáticamente las
+  // clases de esos días para lo que queda del mes en curso.
   z.object({
     modo: z.literal("mensual"),
     userId: z.string(),
     paymentId: z.string(),
-    diaSemana: z.number().int().min(0).max(6),
-    hora: z.string().regex(/^\d{2}:\d{2}$/),
+    dias: z
+      .array(z.object({ diaSemana: z.number().int().min(0).max(6), hora: z.string().regex(/^\d{2}:\d{2}$/) }))
+      .min(1),
   }),
   // Turno de cortesía: no descuenta ningún crédito (clase de prueba, reposición, etc).
   z.object({
@@ -93,7 +101,7 @@ export async function POST(req: NextRequest) {
       const cita = await reservarComoAdmin(body.userId, body.fecha, body.hora);
       return NextResponse.json(cita, { status: 201 });
     }
-    const resultado = await reservarPlanMensual(body.userId, body.paymentId, body.diaSemana, body.hora);
+    const resultado = await reservarPlanMensualCompleto(body.userId, body.paymentId, body.dias);
     return NextResponse.json(resultado, { status: 201 });
   } catch (err) {
     const e = logAndWrap(err, "No pudimos crear la reserva.");

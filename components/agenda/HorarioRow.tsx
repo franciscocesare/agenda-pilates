@@ -5,7 +5,7 @@ import { palette } from "../ui";
 export type HorarioDia = {
   hora: string; cancelado: boolean; used: number; total: number;
   /** Solo viene del endpoint de admin (/api/admin/calendar-day), nunca del público. */
-  alumnas?: { nombre: string; pendiente: boolean }[];
+  alumnas?: { id: string; nombre: string; nombreCompleto: string; pendiente: boolean }[];
 };
 
 /**
