@@ -1,15 +1,15 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, MessageCircle, LogOut, Mail, Phone, User, CalendarX } from "lucide-react";
-import { FONT_DISPLAY, palette } from "./ui";
+import { X, LogOut, Mail, Phone, User, CalendarX, Pencil } from "lucide-react";
+import { FONT_DISPLAY, palette, inputStyle } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import { WhatsAppIcon } from "./WhatsAppIcon";
 
 type Sesion = { id?: string; nombre: string; apellido: string; rol?: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null };
 
 export default function ProfilePanel({
-  sesion, onClose, contactoNumero, mostrarLogout = true, planMensualActivo = false, onClasesCanceladas,
+  sesion, onClose, contactoNumero, mostrarLogout = true, planMensualActivo = false, onClasesCanceladas, onActualizado,
 }: {
   sesion: Sesion;
   onClose: () => void;
@@ -29,14 +29,25 @@ export default function ProfilePanel({
   planMensualActivo?: boolean;
   /** Se llama después de dar de baja el plan mensual con éxito. */
   onClasesCanceladas?: () => void;
+  /** Se llama con los datos nuevos después de guardar una edición de perfil. */
+  onActualizado?: (datos: { nombre: string; apellido: string; email: string; telefono: string }) => void;
 }) {
   const router = useRouter();
-  const initials = `${sesion.nombre[0]}${sesion.apellido[0]}`;
+  // Copia local editable: así el panel puede mostrar los datos nuevos
+  // al toque después de guardar, sin depender de que el padre vuelva a
+  // pasar props actualizadas.
+  const [datos, setDatos] = useState(sesion);
+  const initials = `${datos.nombre[0]}${datos.apellido[0]}`;
   const numeroWa = (contactoNumero || WHATSAPP_NUMBER).replace(/[^\d]/g, "");
   const escribiendoleAOtraPersona = !!contactoNumero;
   const [confirmando, setConfirmando] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [editando, setEditando] = useState(false);
+  const [form, setForm] = useState({ nombre: datos.nombre, apellido: datos.apellido, email: datos.email ?? "", telefono: datos.telefono ?? "" });
+  const [guardando, setGuardando] = useState(false);
+  const [errorEdicion, setErrorEdicion] = useState<string | null>(null);
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -45,11 +56,29 @@ export default function ProfilePanel({
     router.refresh();
   };
 
+  const guardarEdicion = async () => {
+    if (!datos.id) return;
+    setGuardando(true);
+    setErrorEdicion(null);
+    const res = await fetch(`/api/users/${datos.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const data = await res.json();
+    setGuardando(false);
+    if (!res.ok) { setErrorEdicion(data.error); return; }
+    setDatos((prev) => ({ ...prev, ...data }));
+    setEditando(false);
+    onActualizado?.(data);
+    router.refresh();
+  };
+
   const cancelarClases = async () => {
-    if (!sesion.id) return;
+    if (!datos.id) return;
     setCancelando(true);
     setError(null);
-    const res = await fetch(`/api/admin/users/${sesion.id}/cancelar-mensual`, { method: "POST" });
+    const res = await fetch(`/api/admin/users/${datos.id}/cancelar-mensual`, { method: "POST" });
     setCancelando(false);
     if (!res.ok) {
       const data = await res.json();
@@ -76,10 +105,10 @@ export default function ProfilePanel({
               {initials}
             </div>
             <div>
-              <p style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 20, margin: 0, color: palette.mossDark }}>{sesion.nombre} {sesion.apellido}</p>
-              {sesion.rol && (
+              <p style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 20, margin: 0, color: palette.mossDark }}>{datos.nombre} {datos.apellido}</p>
+              {datos.rol && (
                 <p style={{ fontSize: 12, fontWeight: 700, color: palette.moss, margin: "2px 0 0", textTransform: "uppercase", letterSpacing: 0.4 }}>
-                  {sesion.rol === "ADMIN" ? "Administración" : ""}
+                  {datos.rol === "ADMIN" ? "Administración" : ""}
                 </p>
               )}
             </div>
@@ -87,25 +116,62 @@ export default function ProfilePanel({
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: palette.inkSoft }}><X size={20} /></button>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-          {sesion.email && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: palette.ink }}>
-              <Mail size={15} color={palette.inkSoft} /> {sesion.email}
+        {editando ? (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input style={inputStyle} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre" />
+              <input style={inputStyle} value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} placeholder="Apellido" />
             </div>
-          )}
-          {sesion.telefono && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: palette.ink }}>
-              <Phone size={15} color={palette.inkSoft} /> {sesion.telefono}
+            <input style={{ ...inputStyle, marginBottom: 8 }} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
+            <input style={{ ...inputStyle, marginBottom: 10 }} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
+            {errorEdicion && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorEdicion}</p>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={guardarEdicion}
+                disabled={guardando}
+                style={{ flex: 1, background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13.5, border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", opacity: guardando ? 0.7 : 1 }}
+              >
+                {guardando ? "Guardando…" : "Guardar cambios"}
+              </button>
+              <button
+                onClick={() => { setEditando(false); setErrorEdicion(null); setForm({ nombre: datos.nombre, apellido: datos.apellido, email: datos.email ?? "", telefono: datos.telefono ?? "" }); }}
+                disabled={guardando}
+                style={{ background: "none", border: `1.5px solid ${palette.line}`, color: palette.inkSoft, fontWeight: 700, fontSize: 13.5, borderRadius: 10, padding: "10px 16px", cursor: "pointer" }}
+              >
+                Cancelar
+              </button>
             </div>
-          )}
-          {!sesion.email && !sesion.telefono && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: palette.inkSoft }}>
-              <User size={15} /> Sin más datos cargados por ahora.
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+            {datos.email && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: palette.ink }}>
+                <Mail size={15} color={palette.inkSoft} /> {datos.email}
+              </div>
+            )}
+            {datos.telefono && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: palette.ink }}>
+                <Phone size={15} color={palette.inkSoft} /> {datos.telefono}
+              </div>
+            )}
+            {!datos.email && !datos.telefono && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: palette.inkSoft }}>
+                <User size={15} /> Sin más datos cargados por ahora.
+              </div>
+            )}
+          </div>
+        )}
 
-        {(numeroWa || !escribiendoleAOtraPersona) && (
+        {!editando && datos.id && (
+          <button
+            onClick={() => setEditando(true)}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.moss, fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: "0 0 16px" }}
+          >
+            <Pencil size={13} /> Editar datos
+          </button>
+        )}
+
+        {datos.rol !== "ADMIN" && (numeroWa || !escribiendoleAOtraPersona) && (
           <a
             href={`https://wa.me/${numeroWa}`}
             target="_blank"
@@ -115,7 +181,7 @@ export default function ProfilePanel({
               background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 14, padding: "12px 16px", borderRadius: 12, marginBottom: 10,
             }}
           >
-            <WhatsAppIcon size={17} color="#fff" /> {escribiendoleAOtraPersona ? `Escribirle a ${sesion.nombre} por WhatsApp` : "Escribir a Monte"}
+            <WhatsAppIcon size={17} color="#fff" /> {escribiendoleAOtraPersona ? `Escribirle a ${datos.nombre} por WhatsApp` : "Escribir a Monte"}
           </a>
         )}
 
@@ -153,7 +219,7 @@ export default function ProfilePanel({
           <div onClick={(e) => e.stopPropagation()} style={{ background: palette.card, borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 }}>
             <p style={{ fontWeight: 800, fontSize: 17, margin: "0 0 8px", color: palette.mossDark }}>¿Cancelar las clases mensuales?</p>
             <p style={{ fontSize: 14, color: palette.inkSoft, margin: "0 0 18px", lineHeight: 1.5 }}>
-              Se da de baja el plan mensual de <strong>{sesion.nombre} {sesion.apellido}</strong>: se cancela lo que quede reservado de acá en adelante (este mes y los siguientes) y esos lugares quedan libres en la agenda. No se puede deshacer.
+              Se da de baja el plan mensual de <strong>{datos.nombre} {datos.apellido}</strong>: se cancela lo que quede reservado de acá en adelante (este mes y los siguientes) y esos lugares quedan libres en la agenda. No se puede deshacer.
             </p>
             {error && <p style={{ fontSize: 13, color: palette.danger, margin: "0 0 14px" }}>{error}</p>}
             <button

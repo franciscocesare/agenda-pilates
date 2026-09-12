@@ -397,6 +397,7 @@ export default function ManualBookingForm({
             fetch(`/api/admin/payments?userId=${usuario.id}`).then((r) => r.json()).then(setCreditos);
             onCreated();
           }}
+          onActualizado={(datos) => setUsuario((prev) => (prev ? { ...prev, ...datos } : prev))}
           onClose={() => setVerPerfil(false)}
         />
       )}

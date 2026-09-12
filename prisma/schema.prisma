@@ -17,6 +17,11 @@ model User {
   rol                   Role                   @default(CLIENTE)
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
+  // Quién fue la última persona en editar este perfil (puede ser la
+  // propia persona, o un admin editándole el perfil a otra) y cuándo.
+  // Alcanza con guardar el último dato, no hace falta un historial completo.
+  actualizadoPorNombre  String?
+  actualizadoEn         DateTime?
   appointments          Appointment[]
   payments              Payment[]
   recurringReservations RecurringReservation[]
