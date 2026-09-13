@@ -8,6 +8,7 @@ import {
   X,
   Wallet,
   MessageCircle,
+  UserCircle,
 } from "lucide-react";
 import {
   FONT_DISPLAY,
@@ -20,6 +21,8 @@ import {
 } from "../ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ManualBookingForm from "./ManualBookingForm";
+import ProfilePanel from "../ProfilePanel";
+import { WhatsAppIcon } from "../WhatsAppIcon";
 
 type Reserva = {
   id: string;
@@ -27,7 +30,26 @@ type Reserva = {
   hora: string;
   estado: string;
   recurringReservationId: string | null;
-  user: { nombre: string; apellido: string; telefono: string; email: string };
+  user: {
+    id: string;
+    nombre: string;
+    apellido: string;
+    telefono: string;
+    email: string;
+  };
+};
+type PlanMensualInfo = {
+  paymentId: string;
+  nombre: string;
+  clasesPorSemana: number;
+  patrones: { diaSemana: number; hora: string }[];
+};
+type CreditoAlumno = {
+  id: string;
+  nombre: string;
+  tipo: "SUELTA" | "MENSUAL";
+  clasesPorSemana: number | null;
+  patrones: { diaSemana: number; hora: string }[];
 };
 
 export default function AdminReservas({
@@ -81,6 +103,34 @@ export default function AdminReservas({
     );
     setReservas(await res.json());
     setLoading(false);
+  };
+
+  const [verPerfil, setVerPerfil] = useState<Reserva["user"] | null>(null);
+  const [planMensualPerfil, setPlanMensualPerfil] = useState<
+    PlanMensualInfo | undefined
+  >(undefined);
+
+  // Abre el perfil completo de esa alumna (igual que en "Asignar
+  // turno"): datos, plan mensual con "Modificar días"/"Cancelar
+  // clases", editar datos y WhatsApp. Para eso hay que traer también
+  // sus créditos/plan mensual, que no vienen en la fila del turno.
+  const abrirPerfil = async (user: Reserva["user"]) => {
+    setVerPerfil(user);
+    setPlanMensualPerfil(undefined);
+    const creditos: CreditoAlumno[] = await fetch(
+      `/api/admin/payments?userId=${user.id}`,
+    ).then((r) => r.json());
+    const planMensual = creditos.find(
+      (c) => c.tipo === "MENSUAL" && c.patrones.length > 0,
+    );
+    if (planMensual) {
+      setPlanMensualPerfil({
+        paymentId: planMensual.id,
+        nombre: planMensual.nombre,
+        clasesPorSemana: planMensual.clasesPorSemana ?? 1,
+        patrones: planMensual.patrones,
+      });
+    }
   };
 
   const cambiarEstado = async (id: string, estado: string) => {
@@ -141,9 +191,25 @@ export default function AdminReservas({
             marginBottom: 8,
           }}
         >
-          <p style={{ fontWeight: 800, margin: 0 }}>
-            {r.user.nombre} {r.user.apellido}
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <p style={{ fontWeight: 800, margin: 0 }}>
+              {r.user.nombre} {r.user.apellido}
+            </p>
+            <button
+              onClick={() => abrirPerfil(r.user)}
+              title={`Ver perfil de ${r.user.nombre} ${r.user.apellido}`}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: palette.moss,
+                display: "flex",
+                padding: 0,
+              }}
+            >
+              <UserCircle size={20} />
+            </button>
+          </div>
           <span
             style={{
               background: es.bg,
@@ -198,7 +264,7 @@ export default function AdminReservas({
                 gap: 6,
               }}
             >
-              <MessageCircle size={14} color="#25D366" /> Recordarle
+              <WhatsAppIcon size={14} color="#25D366" /> Recordarle
             </a>
             <button
               style={{
@@ -269,7 +335,7 @@ export default function AdminReservas({
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 8 }}>
         <h1
           style={{
             fontFamily: FONT_DISPLAY,
@@ -279,10 +345,10 @@ export default function AdminReservas({
             color: palette.moss,
           }}
         >
-          Crear reserva
+          Reservas
         </h1>
         <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>
-          Buscá a una alumna para asignarle un turno.
+          Buscá a una alumna para revisar sus turnos, o asignale uno nuevo.
         </p>
       </div>
 
@@ -330,23 +396,23 @@ export default function AdminReservas({
           {pendientes.map(renderReserva)}
         </div>
       )}
-      <div style={{ marginBottom: 10, marginTop: 40 }}>
+      <div style={{ marginBottom: 8, marginTop: 45 }}>
         <h1
           style={{
             fontFamily: FONT_DISPLAY,
             fontSize: 22,
             fontWeight: 600,
-            margin: "2px 0 2px",
+            margin: "8px 0 2px",
             color: palette.moss,
           }}
         >
-          Ver Reservas
+          Reservas por usuario
         </h1>
         <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>
-          Buscá a una alumna para revisar sus turnos.
+          Buscá a una alumna para revisar sus turnos
         </p>
       </div>
-      <div style={{ position: "relative", marginBottom: 16 }}>
+      <div style={{ position: "relative", marginBottom: 4 }}>
         <Search
           size={17}
           color={palette.inkSoft}
@@ -362,12 +428,14 @@ export default function AdminReservas({
           }}
         />
       </div>
-      {/* {!buscado && !mostrarForm && (
+{/* 
+      {!buscado && !mostrarForm && (
         <p
           style={{
             color: palette.inkSoft,
             fontSize: 13,
             textAlign: "center",
+            padding: "2px 2px",
           }}
         >
           Escribí un nombre o teléfono para ver los turnos de una alumna.
@@ -386,6 +454,29 @@ export default function AdminReservas({
       )}
 
       {reservas.map(renderReserva)}
+
+      {verPerfil && (
+        <ProfilePanel
+          sesion={verPerfil}
+          contactoNumero={verPerfil.telefono}
+          mostrarLogout={false}
+          planMensual={planMensualPerfil}
+          onClasesCanceladas={() => {
+            setVerPerfil(null);
+            cargarPendientes();
+            if (q) cargar(q);
+          }}
+          onDiasModificados={() => {
+            setVerPerfil(null);
+            if (q) cargar(q);
+          }}
+          onActualizado={() => {
+            setVerPerfil(null);
+            if (q) cargar(q);
+          }}
+          onClose={() => setVerPerfil(null)}
+        />
+      )}
     </div>
   );
 }

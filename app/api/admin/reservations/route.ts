@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
             }
           : {}),
       },
-      include: { user: { select: { nombre: true, apellido: true, telefono: true, email: true } } },
+      include: { user: { select: { id: true, nombre: true, apellido: true, telefono: true, email: true } } },
       orderBy: [{ fecha: "asc" }, { hora: "asc" }],
       take: 200,
     });

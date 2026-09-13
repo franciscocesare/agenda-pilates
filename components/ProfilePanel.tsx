@@ -1,15 +1,21 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, LogOut, Mail, Phone, User, CalendarX, Pencil } from "lucide-react";
-import { FONT_DISPLAY, palette, inputStyle } from "./ui";
+import { X, LogOut, Mail, Phone, User, CalendarX, Pencil, CalendarDays, UserCircle } from "lucide-react";
+import { FONT_DISPLAY, palette, inputStyle, DIAS_LARGO, HORARIOS_BASE } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import { WhatsAppIcon } from "./WhatsAppIcon";
 
 type Sesion = { id?: string; nombre: string; apellido: string; rol?: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null };
+type PlanMensualInfo = {
+  paymentId: string;
+  nombre: string;
+  clasesPorSemana: number;
+  patrones: { diaSemana: number; hora: string }[];
+};
 
 export default function ProfilePanel({
-  sesion, onClose, contactoNumero, mostrarLogout = true, planMensualActivo = false, onClasesCanceladas, onActualizado,
+  sesion, onClose, contactoNumero, mostrarLogout = true, planMensual, onClasesCanceladas, onDiasModificados, onActualizado,
 }: {
   sesion: Sesion;
   onClose: () => void;
@@ -22,13 +28,15 @@ export default function ProfilePanel({
   /** Ocultar "Cerrar sesión" cuando este panel muestra el perfil de OTRA persona (ej. admin viendo a una alumna). */
   mostrarLogout?: boolean;
   /**
-   * Si este alumno tiene un plan mensual activo, muestra el botón
-   * "Cancelar clases" (solo tiene sentido cuando el admin mira el
-   * perfil de otra persona, junto con `contactoNumero`/`sesion.id`).
+   * Si este alumno tiene un plan mensual activo, muestra el resumen de
+   * días, el botón "Modificar días" y "Cancelar clases" (solo tiene
+   * sentido cuando el admin mira el perfil de otra persona).
    */
-  planMensualActivo?: boolean;
+  planMensual?: PlanMensualInfo;
   /** Se llama después de dar de baja el plan mensual con éxito. */
   onClasesCanceladas?: () => void;
+  /** Se llama después de guardar un cambio de días con éxito. */
+  onDiasModificados?: () => void;
   /** Se llama con los datos nuevos después de guardar una edición de perfil. */
   onActualizado?: (datos: { nombre: string; apellido: string; email: string; telefono: string }) => void;
 }) {
@@ -48,6 +56,45 @@ export default function ProfilePanel({
   const [form, setForm] = useState({ nombre: datos.nombre, apellido: datos.apellido, email: datos.email ?? "", telefono: datos.telefono ?? "" });
   const [guardando, setGuardando] = useState(false);
   const [errorEdicion, setErrorEdicion] = useState<string | null>(null);
+
+  const [modificandoDias, setModificandoDias] = useState(false);
+  const [diasNuevos, setDiasNuevos] = useState<{ diaSemana: number | null; hora: string | null }[]>([]);
+  const [guardandoDias, setGuardandoDias] = useState(false);
+  const [errorDias, setErrorDias] = useState<string | null>(null);
+
+  const abrirModificarDias = () => {
+    if (!planMensual) return;
+    setDiasNuevos(
+      Array.from({ length: planMensual.clasesPorSemana }, (_, i) => ({
+        diaSemana: planMensual.patrones[i]?.diaSemana ?? null,
+        hora: planMensual.patrones[i]?.hora ?? null,
+      }))
+    );
+    setErrorDias(null);
+    setModificandoDias(true);
+  };
+
+  const actualizarSlotDia = (idx: number, cambios: Partial<{ diaSemana: number; hora: string }>) => {
+    setDiasNuevos((prev) => prev.map((d, i) => (i === idx ? { ...d, ...cambios } : d)));
+  };
+
+  const todosLosDiasNuevosCompletos = diasNuevos.length > 0 && diasNuevos.every((d) => d.diaSemana !== null && d.hora);
+
+  const guardarDiasNuevos = async () => {
+    if (!planMensual || !datos.id || !todosLosDiasNuevosCompletos) return;
+    setGuardandoDias(true);
+    setErrorDias(null);
+    const res = await fetch(`/api/admin/payments/${planMensual.paymentId}/dias`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: datos.id, dias: diasNuevos }),
+    });
+    const data = await res.json();
+    setGuardandoDias(false);
+    if (!res.ok) { setErrorDias(data.error); return; }
+    setModificandoDias(false);
+    onDiasModificados?.();
+  };
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -102,7 +149,8 @@ export default function ProfilePanel({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: "50%", background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", color: palette.moss, fontWeight: 800, fontSize: 17 }}>
-              {initials}
+              {/* {initials} */}
+              <UserCircle  size={44} />
             </div>
             <div>
               <p style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 20, margin: 0, color: palette.mossDark }}>{datos.nombre} {datos.apellido}</p>
@@ -185,7 +233,83 @@ export default function ProfilePanel({
           </a>
         )}
 
-        {planMensualActivo && (
+        {planMensual && !modificandoDias && (
+          <div style={{ padding: "10px 12px", borderRadius: 10, background: palette.mossSoft, marginBottom: 10 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: palette.mossDark, margin: "0 0 4px" }}>{planMensual.nombre}</p>
+            <p style={{ fontSize: 13, color: palette.ink, margin: "0 0 10px" }}>
+              {planMensual.patrones.length > 0
+                ? planMensual.patrones.map((p) => `${DIAS_LARGO[p.diaSemana]} ${p.hora}`).join(" · ")
+                : "Todavía no tiene ningún día fijado."}
+            </p>
+            <button
+              onClick={abrirModificarDias}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.moss, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}
+            >
+              <CalendarDays size={13} /> Modificar días
+            </button>
+          </div>
+        )}
+
+        {planMensual && modificandoDias && (
+          <div style={{ marginBottom: 10 }}>
+            {diasNuevos.map((slot, idx) => (
+              <div key={idx} style={{ padding: 12, borderRadius: 10, background: palette.mossSoft, marginBottom: 10 }}>
+                <p style={{ fontSize: 12, fontWeight: 800, color: palette.mossDark, margin: "0 0 10px", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                  Día {idx + 1} de {diasNuevos.length}
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
+                  {[1, 2, 3, 4, 5, 6].map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => actualizarSlotDia(idx, { diaSemana: d })}
+                      style={{
+                        padding: "9px 4px", borderRadius: 10, textAlign: "center", cursor: "pointer",
+                        border: `1.5px solid ${slot.diaSemana === d ? palette.moss : palette.line}`,
+                        background: slot.diaSemana === d ? "#fff" : "transparent", fontWeight: 700, fontSize: 13,
+                      }}
+                    >
+                      {DIAS_LARGO[d]}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                  {HORARIOS_BASE.map((h) => (
+                    <button
+                      key={h}
+                      onClick={() => actualizarSlotDia(idx, { hora: h })}
+                      style={{
+                        padding: "9px 4px", borderRadius: 10, textAlign: "center", cursor: "pointer",
+                        border: `1.5px solid ${slot.hora === h ? palette.moss : palette.line}`,
+                        background: slot.hora === h ? "#fff" : "transparent", fontWeight: 700, fontSize: 13,
+                      }}
+                    >
+                      {h}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {errorDias && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorDias}</p>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={guardarDiasNuevos}
+                disabled={!todosLosDiasNuevosCompletos || guardandoDias}
+                style={{ flex: 1, background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13.5, border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", opacity: !todosLosDiasNuevosCompletos || guardandoDias ? 0.6 : 1 }}
+              >
+                {guardandoDias ? "Guardando…" : "Guardar días"}
+              </button>
+              <button
+                onClick={() => setModificandoDias(false)}
+                disabled={guardandoDias}
+                style={{ background: "none", border: `1.5px solid ${palette.line}`, color: palette.inkSoft, fontWeight: 700, fontSize: 13.5, borderRadius: 10, padding: "10px 16px", cursor: "pointer" }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {planMensual && (
           <button
             className="btn-anim"
             onClick={() => setConfirmando(true)}

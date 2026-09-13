@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Calendar, Clock, LayoutGrid, Users, MessageCircle, Home } from "lucide-react";
+import { Calendar, Clock, LayoutGrid, Users, MessageCircle, Home, UserCircle } from "lucide-react";
 import { FONT, FONT_DISPLAY, palette, btnGhost } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ProfilePanel from "./ProfilePanel";
@@ -68,7 +68,8 @@ export default function Shell({ children, session }: { children: ReactNode; sess
             >
               <span className="hide-on-mobile" style={{ fontWeight: 700, color: palette.ink }}>{session.nombre}</span>
               <div style={{ width: 38, height: 38, borderRadius: "50%", background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", color: palette.moss, fontWeight: 700, fontSize: 13 }}>
-                {initials}
+                {/* {initials} */}
+                <UserCircle  size={44} />
               </div>
             </button>
           ) : (

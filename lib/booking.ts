@@ -259,6 +259,56 @@ export async function reservarPlanMensualCompleto(
   return { patrones: resultados };
 }
 
+/**
+ * Cambia los días/horarios fijos de un plan mensual que YA existe (a
+ * diferencia de reservarPlanMensualCompleto, que es para fijarlos por
+ * primera vez). Da de baja los patrones actuales — cancelando lo que
+ * quedaba reservado de hoy en adelante — y fija los nuevos, generando
+ * los turnos del resto del mes en curso. El pago no se toca: sigue
+ * siendo el mismo plan, solo cambia qué día/horario le corresponde.
+ */
+export async function modificarDiasPlanMensual(
+  userId: string,
+  paymentId: string,
+  dias: { diaSemana: number; hora: string }[]
+) {
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    include: { planType: true },
+  });
+  if (!payment || payment.userId !== userId) throw Errores.sinCreditos();
+  if (payment.planType.tipo !== "MENSUAL") throw Errores.planNoMensual();
+
+  const maximo = payment.planType.clasesPorSemana ?? 1;
+  if (dias.length !== maximo) throw Errores.faltanDiasDelPlan(maximo);
+
+  const combinacionesUnicas = new Set(dias.map((d) => `${d.diaSemana}-${d.hora}`));
+  if (combinacionesUnicas.size !== dias.length) throw Errores.diasRepetidos();
+
+  const patronesActuales = await prisma.recurringReservation.findMany({ where: { paymentId, activo: true } });
+  const patronIds = patronesActuales.map((p) => p.id);
+  const hoy = toDateOnly(new Date());
+
+  if (patronIds.length > 0) {
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.recurringReservation.updateMany({ where: { id: { in: patronIds } }, data: { activo: false } });
+        await tx.appointment.updateMany({
+          where: { recurringReservationId: { in: patronIds }, estado: { in: ["CONFIRMADO", "PENDIENTE_PAGO"] }, fecha: { gte: hoy } },
+          data: { estado: "CANCELADO" },
+        });
+      },
+      { timeout: 15000, maxWait: 10000 }
+    );
+  }
+
+  const resultados = [];
+  for (const dia of dias) {
+    resultados.push(await fijarUnDiaMensual(userId, paymentId, dia.diaSemana, dia.hora));
+  }
+  return { patrones: resultados };
+}
+
 export async function cancelarTurno(userId: string, appointmentId: string, esAdmin = false) {
   return prisma.$transaction(async (tx) => {
     const turno = await tx.appointment.findUnique({ where: { id: appointmentId } });
