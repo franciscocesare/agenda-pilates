@@ -148,7 +148,7 @@ export default function ProfilePanel({
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", color: palette.moss, fontWeight: 800, fontSize: 17 }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", color: palette.moss, fontWeight: 800, fontSize: 17 }}>
               {/* {initials} */}
               <UserCircle  size={44} />
             </div>
