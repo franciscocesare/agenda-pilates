@@ -1,12 +1,12 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, LogOut, Mail, Phone, User, CalendarX, Pencil, CalendarDays, UserCircle } from "lucide-react";
+import { X, LogOut, Mail, Phone, User, CalendarX, Pencil, CalendarDays, KeyRound } from "lucide-react";
 import { FONT_DISPLAY, palette, inputStyle, DIAS_LARGO, HORARIOS_BASE } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import { WhatsAppIcon } from "./WhatsAppIcon";
 
-type Sesion = { id?: string; nombre: string; apellido: string; rol?: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null };
+type Sesion = { id?: string; nombre: string; apellido: string; rol?: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null; passwordProvisoria?: boolean };
 type PlanMensualInfo = {
   paymentId: string;
   nombre: string;
@@ -51,6 +51,10 @@ export default function ProfilePanel({
   const [confirmando, setConfirmando] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [confirmandoReset, setConfirmandoReset] = useState(false);
+  const [reseteando, setReseteando] = useState(false);
+  const [avisoReset, setAvisoReset] = useState<string | null>(null);
 
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState({ nombre: datos.nombre, apellido: datos.apellido, email: datos.email ?? "", telefono: datos.telefono ?? "" });
@@ -106,13 +110,15 @@ export default function ProfilePanel({
   const guardarEdicion = async () => {
     if (!datos.id) return;
     setGuardando(true);
+    console.log('pasando por form', form);
     setErrorEdicion(null);
-    const res = await fetch(`/api/users/${datos.id}`, {
+    const res = await fetch(`/api/admin/users/${datos.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
     const data = await res.json();
+    console.log('data', data);
     setGuardando(false);
     if (!res.ok) { setErrorEdicion(data.error); return; }
     setDatos((prev) => ({ ...prev, ...data }));
@@ -136,6 +142,18 @@ export default function ProfilePanel({
     onClasesCanceladas?.();
   };
 
+  const restablecerPassword = async () => {
+    if (!datos.id) return;
+    setReseteando(true);
+    setError(null);
+    const res = await fetch(`/api/admin/users/${datos.id}/restablecer-password`, { method: "POST" });
+    const data = await res.json();
+    setReseteando(false);
+    if (!res.ok) { setError(data.error); return; }
+    setConfirmandoReset(false);
+    setAvisoReset(`Listo. Su contraseña ahora es su teléfono sin espacios ni guiones: ${data.nuevaProvisoria}. Se la tiene que cambiar de nuevo la próxima vez que quiera editar su perfil.`);
+  };
+
   return (
     <div
       role="dialog"
@@ -148,6 +166,9 @@ export default function ProfilePanel({
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", color: palette.moss, fontWeight: 800, fontSize: 17 }}>
+              {initials}
+            </div>
             <div>
               <p style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 20, margin: 0, color: palette.mossDark }}>{datos.nombre} {datos.apellido}</p>
               {datos.rol && (
@@ -169,18 +190,27 @@ export default function ProfilePanel({
             <input style={{ ...inputStyle, marginBottom: 8 }} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
             <input style={{ ...inputStyle, marginBottom: 10 }} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
             {errorEdicion && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorEdicion}</p>}
-            <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => { onClose(); router.push("/cambiar-password"); }}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", margin: "10px 0",
+                background: "none", border: "none", color: palette.inkSoft, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: "0 0 10px",
+              }}
+            >
+              Cambiar contraseña
+            </button>
+            <div style={{ display: "flex", gap: 8 }}> 
               <button
                 onClick={guardarEdicion}
                 disabled={guardando}
-                style={{ flex: 1, background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13.5, border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", opacity: guardando ? 0.7 : 1 }}
+                style={{ flex: 1, maxWidth: "50%", background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13.5, border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", opacity: guardando ? 0.7 : 1 }}
               >
                 {guardando ? "Guardando…" : "Guardar cambios"}
               </button>
               <button
                 onClick={() => { setEditando(false); setErrorEdicion(null); setForm({ nombre: datos.nombre, apellido: datos.apellido, email: datos.email ?? "", telefono: datos.telefono ?? "" }); }}
                 disabled={guardando}
-                style={{ background: "none", border: `1.5px solid ${palette.line}`, color: palette.inkSoft, fontWeight: 700, fontSize: 13.5, borderRadius: 10, padding: "10px 16px", cursor: "pointer" }}
+                style={{ background: "none", width: "50%", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 13.5, borderRadius: 10, padding: "10px 16px", cursor: "pointer" }}
               >
                 Cancelar
               </button>
@@ -207,12 +237,27 @@ export default function ProfilePanel({
         )}
 
         {!editando && datos.id && (
-          <button
-            onClick={() => setEditando(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.moss, fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: "0 0 16px" }}
-          >
-            <Pencil size={13} /> Editar datos
-          </button>
+          !escribiendoleAOtraPersona && datos.passwordProvisoria ? (
+            <div style={{ padding: "10px 12px", borderRadius: 10, background: palette.claySoft, marginBottom: 16 }}>
+              <p style={{ fontSize: 12.5, color: palette.clayDark, margin: "0 0 8px", fontWeight: 600 }}>
+                Todavía tenés la contraseña provisoria (tu teléfono). Cambiala para poder editar tu perfil.
+              </p>
+              <button
+                onClick={() => { onClose(); router.push("/cambiar-password"); }}
+                style={{ background: "none", border: "none", color: palette.clayDark, fontWeight: 800, fontSize: 12.5, cursor: "pointer", textDecoration: "underline", padding: 0 }}
+              >
+                Cambiar contraseña
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setEditando(true)}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.moss, fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: "0 0 16px" }}
+            >
+              <Pencil size={13} /> Editar datos
+            </button>
+            
+          )
         )}
 
         {datos.rol !== "ADMIN" && (numeroWa || !escribiendoleAOtraPersona) && (
@@ -246,7 +291,7 @@ export default function ProfilePanel({
           </div>
         )}
 
-        {true && (
+        {planMensual && modificandoDias && (
           <div style={{ marginBottom: 10 }}>
             {diasNuevos.map((slot, idx) => (
               <div key={idx} style={{ padding: 12, borderRadius: 10, background: palette.mossSoft, marginBottom: 10 }}>
@@ -319,6 +364,38 @@ export default function ProfilePanel({
           </button>
         )}
 
+        {escribiendoleAOtraPersona && datos.id && (
+          avisoReset ? (
+            <p style={{ fontSize: 12.5, color: palette.mossDark, background: palette.mossSoft, borderRadius: 10, padding: "10px 12px", margin: "0 0 10px" }}>
+              {avisoReset}
+            </p>
+          ) : (
+            <button
+              className="btn-anim"
+              onClick={() => setConfirmandoReset(true)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
+                background: "none", border: `1.5px solid ${palette.line}`, color: palette.ink, fontWeight: 700, fontSize: 14,
+                padding: "12px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10,
+              }}
+            >
+              <KeyRound size={16} /> Restablecer contraseña
+            </button>
+          )
+        )}
+
+        {/* {mostrarLogout && (
+          <button
+            onClick={() => { onClose(); router.push("/cambiar-password"); }}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "50%",
+              background: "none", border: "none", color: palette.inkSoft, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: "0 0 10px",
+            }}
+          >
+            Cambiar contraseña
+          </button>
+        )} */}
+
         {mostrarLogout && (
           <button
             className="btn-anim"
@@ -356,6 +433,35 @@ export default function ProfilePanel({
             <button
               onClick={() => setConfirmando(false)}
               disabled={cancelando}
+              style={{ width: "100%", background: "none", border: "none", color: palette.inkSoft, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0" }}
+            >
+              Volver
+            </button>
+          </div>
+        </div>
+      )}
+      {confirmandoReset && (
+        <div role="dialog" style={{ position: "fixed", inset: 0, background: "rgba(60,42,32,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 20 }} onClick={(e) => { e.stopPropagation(); if (!reseteando) setConfirmandoReset(false); }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: palette.card, borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 }}>
+            <p style={{ fontWeight: 800, fontSize: 17, margin: "0 0 8px", color: palette.mossDark }}>¿Restablecer la contraseña?</p>
+            <p style={{ fontSize: 14, color: palette.inkSoft, margin: "0 0 18px", lineHeight: 1.5 }}>
+              La contraseña de <strong>{datos.nombre} {datos.apellido}</strong> vuelve a ser su teléfono (sin espacios ni guiones). Va a tener que cambiarla de nuevo antes de poder editar su perfil. Su contraseña actual deja de funcionar.
+            </p>
+            {error && <p style={{ fontSize: 13, color: palette.danger, margin: "0 0 14px" }}>{error}</p>}
+            <button
+              onClick={restablecerPassword}
+              disabled={reseteando}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
+                background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 14, border: "none",
+                padding: "13px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10, opacity: reseteando ? 0.7 : 1,
+              }}
+            >
+              {reseteando ? "Restableciendo…" : "Sí, restablecer"}
+            </button>
+            <button
+              onClick={() => setConfirmandoReset(false)}
+              disabled={reseteando}
               style={{ width: "100%", background: "none", border: "none", color: palette.inkSoft, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0" }}
             >
               Volver
