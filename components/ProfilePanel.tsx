@@ -396,7 +396,7 @@ export default function ProfilePanel({
           </button>
         )} */}
 
-        {mostrarLogout && (
+        {mostrarLogout && !editando && (
           <button
             className="btn-anim"
             onClick={logout}
