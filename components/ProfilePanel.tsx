@@ -266,15 +266,15 @@ export default function ProfilePanel({
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none",
-              background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 14, padding: "12px 16px", borderRadius: 12, marginBottom: 10,
+              display: "flex", alignItems: "center", gap: 8, textDecoration: "none",
+              color: `${palette.ink}`, fontWeight: 700, fontSize: 14, borderRadius: 12, marginBottom: 20,
             }}
           >
-            <WhatsAppIcon size={17} color="#fff" /> {escribiendoleAOtraPersona ? `Escribirle a ${datos.nombre} por WhatsApp` : "Escribir a Monte"}
+            <WhatsAppIcon size={17} /> {escribiendoleAOtraPersona ? `Escribirle a ${datos.nombre} por WhatsApp` : "Escribir a Monte"}
           </a>
         )}
 
-        {planMensual && !modificandoDias && (
+        {planMensual && !modificandoDias && !editando && (
           <div style={{ padding: "10px 12px", borderRadius: 10, background: palette.mossSoft, marginBottom: 10 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: palette.mossDark, margin: "0 0 4px" }}>{planMensual.nombre}</p>
             <p style={{ fontSize: 13, color: palette.ink, margin: "0 0 10px" }}>
@@ -350,13 +350,13 @@ export default function ProfilePanel({
           </div>
         )}
 
-        {planMensual && (
+        {planMensual && !editando && (
           <button
             className="btn-anim"
             onClick={() => setConfirmando(true)}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-              background: "none", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 14,
+              background: "none", border: `1.5px solid ${palette.ink}`, color: palette.ink, fontWeight: 700, fontSize: 14,
               padding: "12px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10,
             }}
           >
@@ -364,7 +364,7 @@ export default function ProfilePanel({
           </button>
         )}
 
-        {escribiendoleAOtraPersona && datos.id && (
+        {escribiendoleAOtraPersona && datos.id && !editando &&(
           avisoReset ? (
             <p style={{ fontSize: 12.5, color: palette.mossDark, background: palette.mossSoft, borderRadius: 10, padding: "10px 12px", margin: "0 0 10px" }}>
               {avisoReset}
@@ -375,7 +375,7 @@ export default function ProfilePanel({
               onClick={() => setConfirmandoReset(true)}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-                background: "none", border: `1.5px solid ${palette.line}`, color: palette.ink, fontWeight: 700, fontSize: 14,
+                background: `${palette.dangerSoft}`, border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 14,
                 padding: "12px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10,
               }}
             >
