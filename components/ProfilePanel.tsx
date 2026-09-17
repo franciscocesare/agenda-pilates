@@ -111,6 +111,7 @@ export default function ProfilePanel({
     setGuardando(true);
     setErrorEdicion(null);
     const res = await fetch(`/api/admin/users/${datos.id}`, {
+    // const res = await fetch(`/api/users/${datos.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -178,58 +179,49 @@ export default function ProfilePanel({
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: palette.inkSoft }}><X size={20} /></button>
         </div>
 
-        {editando ? (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input name="nombre" id="perfil-nombre" autoComplete="given-name" style={inputStyle} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre" />
-              <input name="apellido" id="perfil-apellido" autoComplete="family-name" style={inputStyle} value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} placeholder="Apellido" />
-            </div>
-            <input name="email" id="perfil-email" autoComplete="email" style={{ ...inputStyle, marginBottom: 8 }} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
-            <input name="telefono" id="perfil-telefono" autoComplete="tel" style={{ ...inputStyle, marginBottom: 10 }} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
-            {errorEdicion && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorEdicion}</p>}
+        <div style={{ display: editando ? "block" : "none", marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <input name="nombre" id="perfil-nombre" autoComplete="given-name" style={inputStyle} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre" />
+            <input name="apellido" id="perfil-apellido" autoComplete="family-name" style={inputStyle} value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} placeholder="Apellido" />
+          </div>
+          <input name="email" id="perfil-email" autoComplete="email" style={{ ...inputStyle, marginBottom: 8 }} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
+          <input name="telefono" id="perfil-telefono" autoComplete="tel" style={{ ...inputStyle, marginBottom: 10 }} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
+          {errorEdicion && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorEdicion}</p>}
+          <div style={{ display: "flex", gap: 8 }}>
             <button
-              onClick={() => { onClose(); router.push("/cambiar-password"); }}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.mossDark, fontWeight: 700, fontSize: 14, cursor: "pointer", padding: "10px 0 16px" }}
+              onClick={guardarEdicion}
+              disabled={guardando}
+              style={{ flex: 1, background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13.5, border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", opacity: guardando ? 0.7 : 1 }}
             >
-              Cambiar contraseña
+              {guardando ? "Guardando…" : "Guardar cambios"}
             </button>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={guardarEdicion}
-                disabled={guardando}
-                style={{ flex: 1, maxWidth: "50%", background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13.5, border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", opacity: guardando ? 0.7 : 1 }}
-              >
-                {guardando ? "Guardando…" : "Guardar cambios"}
-              </button>
-              <button
-                onClick={() => { setEditando(false); setErrorEdicion(null); setForm({ nombre: datos.nombre, apellido: datos.apellido, email: datos.email ?? "", telefono: datos.telefono ?? "" }); }}
-                disabled={guardando}
-                style={{ background: "none", width: "50%", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 13.5, borderRadius: 10, padding: "10px 16px", cursor: "pointer" }}
-              >
-                Cancelar
-              </button>
-            </div>
+            <button
+              onClick={() => { setEditando(false); setErrorEdicion(null); setForm({ nombre: datos.nombre, apellido: datos.apellido, email: datos.email ?? "", telefono: datos.telefono ?? "" }); }}
+              disabled={guardando}
+              style={{ background: "none", border: `1.5px solid ${palette.line}`, color: palette.inkSoft, fontWeight: 700, fontSize: 13.5, borderRadius: 10, padding: "10px 16px", cursor: "pointer" }}
+            >
+              Cancelar
+            </button>
           </div>
+        </div>
 
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-            {datos.email && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: palette.ink }}>
-                <Mail size={15} color={palette.inkSoft} /> {datos.email}
-              </div>
-            )}
-            {datos.telefono && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: palette.ink }}>
-                <Phone size={15} color={palette.inkSoft} /> {datos.telefono}
-              </div>
-            )}
-            {!datos.email && !datos.telefono && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: palette.inkSoft }}>
-                <User size={15} /> Sin más datos cargados por ahora.
-              </div>
-            )}
-          </div>
-        )}
+        <div style={{ display: editando ? "none" : "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+          {datos.email && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: palette.ink }}>
+              <Mail size={15} color={palette.inkSoft} /> {datos.email}
+            </div>
+          )}
+          {datos.telefono && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: palette.ink }}>
+              <Phone size={15} color={palette.inkSoft} /> {datos.telefono}
+            </div>
+          )}
+          {!datos.email && !datos.telefono && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: palette.inkSoft }}>
+              <User size={15} /> Sin más datos cargados por ahora.
+            </div>
+          )}
+        </div>
 
         {!editando && datos.id && (
           !escribiendoleAOtraPersona && datos.passwordProvisoria ? (
@@ -378,7 +370,7 @@ export default function ProfilePanel({
           )
         )}
 
-        {/* {mostrarLogout && (
+        {mostrarLogout && (
           <button
             onClick={() => { onClose(); router.push("/cambiar-password"); }}
             style={{
@@ -388,7 +380,7 @@ export default function ProfilePanel({
           >
             Cambiar contraseña
           </button>
-        )} */}
+        )}
 
         {!editando && mostrarLogout && (
           <button
