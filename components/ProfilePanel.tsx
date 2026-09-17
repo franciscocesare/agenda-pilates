@@ -181,11 +181,11 @@ export default function ProfilePanel({
         {editando ? (
           <div style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input style={inputStyle} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre" />
-              <input style={inputStyle} value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} placeholder="Apellido" />
+              <input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre" />
+              <input value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} placeholder="Apellido" />
             </div>
-            {/* <input style={{ ...inputStyle, marginBottom: 8 }} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
-            <input style={{ ...inputStyle, marginBottom: 10 }} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" /> */}
+            <input style={{marginBottom: 8 }} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
+            <input style={{ marginBottom: 10 }} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
             {errorEdicion && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorEdicion}</p>}
              <button
                 onClick={() => { onClose(); router.push("/cambiar-password"); }}
