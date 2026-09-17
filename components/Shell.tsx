@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Calendar, Clock, LayoutGrid, Users, MessageCircle, Home, UserCircle } from "lucide-react";
+import { Calendar, Clock, LayoutGrid, Users, Home } from "lucide-react";
 import { FONT, FONT_DISPLAY, palette, btnGhost } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ProfilePanel from "./ProfilePanel";
 import { WhatsAppIcon } from "./WhatsAppIcon";
 
-type Sesion = { id: string; nombre: string; apellido: string; rol: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null } | null;
+type Sesion = { id: string; nombre: string; apellido: string; rol: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null; passwordProvisoria?: boolean } | null;
 
 // Páginas "de marketing", públicas y anchas: la landing y la agenda.
 // El resto de la app (login, mis turnos, panel admin) mantiene el
@@ -67,9 +67,8 @@ export default function Shell({ children, session }: { children: ReactNode; sess
               style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", color: palette.inkSoft, fontSize: 14, fontWeight: 600 }}
             >
               <span className="hide-on-mobile" style={{ fontWeight: 700, color: palette.ink }}>{session.nombre}</span>
-              <div style={{ width: 38, height: 38, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: palette.mossDark, fontWeight: 700, fontSize: 13 }}>
-                {/* {initials} */}
-                <UserCircle  size={32} />
+              <div style={{ width: 38, height: 38, borderRadius: "50%", background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", color: palette.moss, fontWeight: 700, fontSize: 13 }}>
+                {initials}
               </div>
             </button>
           ) : (

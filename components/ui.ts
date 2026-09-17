@@ -44,5 +44,11 @@ export const inputStyle: CSSProperties = {
 export { DIAS, DIAS_LARGO, HORARIOS_BASE, WHATSAPP_NUMBER, CUPO_DEFAULT } from "@/lib/constants";
 
 export function fmtLarga(date: Date) {
-  return date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  // Las fechas que llegan de la API son "solo fecha" guardadas en UTC
+  // medianoche (ver toDateOnly en lib/booking.ts). Si acá se mostraran
+  // en la hora LOCAL del navegador, en Argentina (UTC-3) medianoche
+  // UTC cae a las 21hs del día anterior — y el texto mostraría un día
+  // de menos. Por eso se fuerza a mostrar en UTC: son fechas civiles,
+  // no un instante real que dependa del huso horario de quien mira.
+  return date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 }

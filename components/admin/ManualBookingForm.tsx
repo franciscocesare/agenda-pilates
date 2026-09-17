@@ -6,10 +6,10 @@ import {
   Wallet,
   Gift,
   Repeat,
-  MessageCircle,
   Check,
   Sparkles,
   UserCircle,
+  Plus,
 } from "lucide-react";
 import {
   palette,
@@ -22,6 +22,7 @@ import {
 import { Field } from "../Field";
 import ErrorBanner from "../ErrorBanner";
 import ProfilePanel from "../ProfilePanel";
+import { WhatsAppIcon } from "../WhatsAppIcon";
 
 type Usuario = {
   id: string;
@@ -81,12 +82,51 @@ export default function ManualBookingForm({
   const [vendiendo, setVendiendo] = useState(false);
   const [planTipoId, setPlanTipoId] = useState("");
   const [confirmandoPlanNuevo, setConfirmandoPlanNuevo] = useState(false);
+  const [confirmandoPagoMensual, setConfirmandoPagoMensual] = useState(false);
+  const [creandoAlumna, setCreandoAlumna] = useState(false);
+  const [nuevaAlumna, setNuevaAlumna] = useState({ nombre: "", apellido: "", telefono: "", email: "" });
+  const [guardandoAlumna, setGuardandoAlumna] = useState(false);
+  const [errorAlumna, setErrorAlumna] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/plans")
       .then((r) => r.json())
       .then(setPlanes);
   }, []);
+
+  const abrirNuevaAlumna = () => {
+    const partes = q.trim().split(/\s+/);
+    setNuevaAlumna({ nombre: partes[0] ?? "", apellido: partes.slice(1).join(" "), telefono: "", email: "" });
+    setErrorAlumna(null);
+    setCreandoAlumna(true);
+  };
+
+  const crearAlumna = async () => {
+    setGuardandoAlumna(true);
+    setErrorAlumna(null);
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nuevaAlumna),
+    });
+    const data = await res.json();
+    setGuardandoAlumna(false);
+    if (!res.ok) { setErrorAlumna(data.error); return; }
+    if (!data.telefonoValido) {
+      window.alert(`Ojo: el teléfono "${data.telefono}" no parece un celular argentino completo — revisalo, puede que el link de WhatsApp no funcione bien.`);
+    }
+    if (data.posibleDuplicado) {
+      // No se bloqueó la carga (el mismo teléfono puede ser legítimo
+      // entre distintas personas de una familia), pero acá coincide
+      // también nombre y apellido: probablemente sea la misma alumna
+      // cargada dos veces por error.
+      window.alert(`Ojo: ya había otra ficha con el mismo nombre y teléfono (${nuevaAlumna.nombre} ${nuevaAlumna.apellido}). Se creó igual, pero convendría revisar si no quedó duplicada.`);
+    }
+    setCreandoAlumna(false);
+    setQ("");
+    setResultados([]);
+    setUsuario(data);
+  };
 
   useEffect(() => {
     if (q.trim().length < 2) {
@@ -273,16 +313,19 @@ export default function ManualBookingForm({
 
   // Resuelve el select simple de "1/2/3 veces por semana": si el
   // alumno ya tiene exactamente ese plan con lugar libre, reusa ese
-  // pago y fija los días directo. Si ya tiene ALGÚN plan mensual (el
-  // mismo ya completo, u otro distinto) y todavía no confirmamos,
-  // frena y avisa antes de venderle un plan nuevo. `forzar` es lo que
-  // manda el botón "Sí, agregar igual" del aviso. No deja avanzar en
-  // ningún caso si todavía faltan días/horarios por elegir.
-  const resolverYAsignarMensual = async (forzar = false) => {
+  // pago y fija los días directo (no hay nada que cobrar de nuevo). Si
+  // ya tiene ALGÚN plan mensual (el mismo ya completo, u otro
+  // distinto) y todavía no confirmamos, frena y avisa antes de
+  // venderle un plan nuevo. `forzar` es lo que manda el botón "Sí,
+  // agregar igual" del aviso. No deja avanzar en ningún caso si
+  // todavía faltan días/horarios por elegir. Vender un plan NUEVO
+  // (alumno sin este plan todavía, o agregándole otro a propósito)
+  // siempre pasa antes por la confirmación de pago.
+  const resolverYAsignarMensual = (forzar = false) => {
     if (!usuario || !planTipoId || !todosLosDiasCompletos) return;
 
     if (hayLugarEnMismoTipo && mismoTipoExistente) {
-      await crearDiasMensuales(mismoTipoExistente.id);
+      crearDiasMensuales(mismoTipoExistente.id);
       return;
     }
 
@@ -291,6 +334,16 @@ export default function ManualBookingForm({
       return;
     }
 
+    setConfirmandoPlanNuevo(false);
+    setConfirmandoPagoMensual(true);
+  };
+
+  // Se llama recién cuando el admin confirmó "sí, ya pagó" en el
+  // diálogo de pago mensual — ahí sí se genera el pago y se fijan los
+  // días. Si contesta que no, no se crea nada todavía: el admin puede
+  // volver a intentarlo una vez que llegue el pago.
+  const venderYAsignarMensualConfirmado = async () => {
+    if (!usuario || !planTipoId) return;
     setVendiendo(true);
     setError(null);
     const res = await fetch("/api/admin/payments", {
@@ -304,6 +357,7 @@ export default function ManualBookingForm({
       setError(data.error);
       return;
     }
+    setConfirmandoPagoMensual(false);
     await crearDiasMensuales(data.id);
   };
 
@@ -477,6 +531,45 @@ export default function ManualBookingForm({
                 ))}
               </div>
             )}
+
+            {!creandoAlumna ? (
+              q.trim().length >= 2 && (
+                <button
+                  onClick={abrirNuevaAlumna}
+                  style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.moss, fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: "10px 0 0" }}
+                >
+                  <Plus size={14} /> Cargar "{q}" como alumna nueva
+                </button>
+              )
+            ) : (
+              <div style={{ marginTop: 10, padding: 12, borderRadius: 10, background: palette.mossSoft }}>
+                <p style={{ fontSize: 12, fontWeight: 800, color: palette.mossDark, margin: "0 0 10px", textTransform: "uppercase", letterSpacing: 0.4 }}>Alumna nueva</p>
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  <input style={inputStyle} value={nuevaAlumna.nombre} onChange={(e) => setNuevaAlumna({ ...nuevaAlumna, nombre: e.target.value })} placeholder="Nombre" />
+                  <input style={inputStyle} value={nuevaAlumna.apellido} onChange={(e) => setNuevaAlumna({ ...nuevaAlumna, apellido: e.target.value })} placeholder="Apellido" />
+                </div>
+                <input style={{ ...inputStyle, marginBottom: 8 }} value={nuevaAlumna.telefono} onChange={(e) => setNuevaAlumna({ ...nuevaAlumna, telefono: e.target.value })} placeholder="Teléfono" />
+                <input style={{ ...inputStyle, marginBottom: 10 }} value={nuevaAlumna.email} onChange={(e) => setNuevaAlumna({ ...nuevaAlumna, email: e.target.value })} placeholder="Email (opcional)" />
+                {errorAlumna && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorAlumna}</p>}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={crearAlumna}
+                    disabled={!nuevaAlumna.nombre || !nuevaAlumna.telefono || guardandoAlumna}
+                    style={{ flex: 1, background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13, border: "none", borderRadius: 8, padding: "9px 0", cursor: "pointer", opacity: !nuevaAlumna.nombre || !nuevaAlumna.telefono || guardandoAlumna ? 0.6 : 1 }}
+                  >
+                    {guardandoAlumna ? "Guardando…" : "Crear ficha"}
+                  </button>
+                  <button
+                    onClick={() => setCreandoAlumna(false)}
+                    disabled={guardandoAlumna}
+                    style={{ background: "none", border: "none", color: palette.inkSoft, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+                <p style={{ fontSize: 11, color: palette.inkSoft, margin: "8px 0 0" }}>Queda lista para asignarle turnos ya mismo. Su contraseña inicial son los números de su teléfono (ella la puede cambiar después).</p>
+              </div>
+            )}
           </div>
         )}
       </Field>
@@ -512,7 +605,7 @@ export default function ManualBookingForm({
               : `${totalCreditosPorCancelacion} créditos disponibles`}{" "}
             por cancelación
             {vencimientoMasProximo
-              ? ` (vence antes el ${vencimientoMasProximo.toLocaleDateString("es-AR", { day: "numeric", month: "long" })})`
+              ? ` (vence antes el ${vencimientoMasProximo.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "UTC" })})`
               : ""}
             . No hace falta cobrarle esta clase.
           </p>
@@ -907,6 +1000,61 @@ export default function ManualBookingForm({
         </div>
       )}
 
+      {confirmandoPagoMensual && usuario && (
+        <div
+          role="dialog"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(60,42,32,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+            padding: 20,
+          }}
+          onClick={() => !vendiendo && setConfirmandoPagoMensual(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: palette.card,
+              borderRadius: 20,
+              padding: 24,
+              width: "100%",
+              maxWidth: 380,
+            }}
+          >
+            <p style={{ fontWeight: 800, fontSize: 17, margin: "0 0 8px", color: palette.mossDark }}>
+              ¿Ya está pago el plan mensual?
+            </p>
+            <p style={{ fontSize: 14, color: palette.inkSoft, margin: "0 0 22px", lineHeight: 1.5 }}>
+              Vas a venderle <strong>{planElegidoNombre}</strong> a{" "}
+              <strong>{usuario.nombre} {usuario.apellido}</strong> y fijarle los días elegidos. Confirmá que ya recibiste el pago — todavía no se creó nada.
+            </p>
+            {error && <p style={{ fontSize: 13, color: palette.danger, margin: "0 0 14px" }}>{error}</p>}
+            <button
+              onClick={venderYAsignarMensualConfirmado}
+              disabled={vendiendo}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
+                background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 14, border: "none",
+                padding: "13px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10, opacity: vendiendo ? 0.7 : 1,
+              }}
+            >
+              {vendiendo ? "Guardando…" : "Sí, ya está pago"}
+            </button>
+            <button
+              onClick={() => setConfirmandoPagoMensual(false)}
+              disabled={vendiendo}
+              style={{ width: "100%", background: "none", border: "none", color: palette.inkSoft, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0" }}
+            >
+              Todavía no, avisarle primero
+            </button>
+          </div>
+        </div>
+      )}
+
       {confirmandoPago && usuario && (
         <div
           role="dialog"
@@ -1010,7 +1158,7 @@ export default function ManualBookingForm({
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              <MessageCircle size={17} /> Avisarle y apartar el lugar
+              <WhatsAppIcon size={16} /> Avisarle y apartar el lugar
             </button>
 
             <button

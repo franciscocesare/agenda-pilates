@@ -13,7 +13,10 @@ export default function AdminAgenda() {
   const router = useRouter();
   const [diaSel, setDiaSel] = useState<DiaCalendario | null>(null);
   const [horarios, setHorarios] = useState<HorarioDia[] | null>(null);
-  const [asignando, setAsignando] = useState<{ fecha: string; hora: string } | null>(null);
+  const [asignando, setAsignando] = useState<{
+    fecha: string;
+    hora: string;
+  } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const onToggleDay = async (d: DiaCalendario | null) => {
@@ -41,9 +44,20 @@ export default function AdminAgenda() {
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "8px 0 2px", color: palette.moss }}>Agenda</h1>
+        <h1
+          style={{
+            fontFamily: FONT_DISPLAY,
+            fontSize: 22,
+            fontWeight: 600,
+            margin: "8px 0 2px",
+            color: palette.moss,
+          }}
+        >
+          Agenda
+        </h1>
         <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>
-          Tocá un día para ver quién va en cada horario y asignarle un turno a una alumna. Cada horario tiene 4 lugares propios.
+          Tocá un día para ver quién va en cada horario y asignarle un turno a
+          una alumna. Cada horario tiene 4 lugares propios.
         </p>
       </div>
 
@@ -65,16 +79,37 @@ export default function AdminAgenda() {
           refreshKey={refreshKey}
           renderPanel={(dia) => (
             <div>
-              <p style={{ fontWeight: 800, fontSize: 14, margin: "0 0 12px", color: palette.mossDark, textTransform: "capitalize" }}>
-                {new Date(dia.fecha + "T00:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
+              <p
+                style={{
+                  fontWeight: 800,
+                  fontSize: 14,
+                  margin: "0 0 12px",
+                  color: palette.mossDark,
+                  textTransform: "capitalize",
+                }}
+              >
+                {new Date(dia.fecha + "T00:00:00").toLocaleDateString("es-AR", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })}
               </p>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {!horarios && <p style={{ color: palette.inkSoft, fontSize: 14 }}>Cargando horarios…</p>}
-                {horarios?.length === 0 && <p style={{ color: palette.inkSoft, fontSize: 14 }}>Día cerrado — no hay franja horaria configurada.</p>}
+                {!horarios && (
+                  <p style={{ color: palette.inkSoft, fontSize: 14 }}>
+                    Cargando horarios…
+                  </p>
+                )}
+                {horarios?.length === 0 && (
+                  <p style={{ color: palette.inkSoft, fontSize: 14 }}>
+                    Día cerrado — no hay franja horaria configurada.
+                  </p>
+                )}
                 {horarios?.map((h) => {
                   const quedan = h.total - h.used;
-                  const disponible = !h.cancelado && dia.status !== "bloqueado" && quedan > 0;
+                  const disponible =
+                    !h.cancelado && dia.status !== "bloqueado" && quedan > 0;
                   const alumnas = h.alumnas ?? [];
                   return (
                     <HorarioRow
@@ -82,40 +117,101 @@ export default function AdminAgenda() {
                       hora={h.hora}
                       subrow={
                         alumnas.length > 0 ? (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 6,
+                            }}
+                          >
                             {alumnas.map((a, i) => (
                               <button
                                 key={i}
-                                onClick={() => router.push(`/admin/reservas?userId=${a.id}&nombre=${encodeURIComponent(a.nombreCompleto)}`)}
+                                onClick={() =>
+                                  router.push(
+                                    `/admin/reservas?userId=${a.id}&nombre=${encodeURIComponent(a.nombreCompleto)}`,
+                                  )
+                                }
                                 title={`Ver reservas de ${a.nombreCompleto}`}
                                 style={{
-                                  display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600,
-                                  color: a.pendiente ? palette.clayDark : palette.ink,
-                                  background: a.pendiente ? palette.claySoft : palette.mossSoft,
-                                  padding: "4px 9px", borderRadius: 999, border: "none", cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  color: a.pendiente
+                                    ? palette.clayDark
+                                    : palette.ink,
+                                  background: a.pendiente
+                                    ? palette.claySoft
+                                    : palette.mossSoft,
+                                  padding: "4px 9px",
+                                  borderRadius: 999,
+                                  border: "none",
+                                  cursor: "pointer",
                                 }}
                               >
-                                <User size={11} /> {a.nombre}{a.pendiente ? " · pendiente" : ""}
+                                <User size={14} /> {a.nombre}
+                                {a.pendiente ? " · pendiente" : ""}
                               </button>
                             ))}
                           </div>
                         ) : (
-                          <p style={{ fontSize: 12, color: palette.inkSoft, margin: 0 }}>Sin alumnas anotadas todavía.</p>
+                          <p
+                            style={{
+                              fontSize: 12,
+                              color: palette.inkSoft,
+                              margin: 0,
+                            }}
+                          >
+                            Sin alumnas anotadas todavía.
+                          </p>
                         )
                       }
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: disponible ? palette.moss : palette.inkSoft, whiteSpace: "nowrap" }}>
-                          {h.cancelado ? "Cancelado" : `${quedan} libre${quedan === 1 ? "" : "s"}`}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: disponible ? palette.moss : palette.inkSoft,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {h.cancelado
+                            ? "Cancelado"
+                            : `${quedan} libre${quedan === 1 ? "" : "s"}`}
                         </span>
                         {disponible && (
                           <button
-                            onClick={() => elegirHorario(dia.fecha, h.hora)}
+                            onClick={() => {
+                              elegirHorario(dia.fecha, h.hora); // 1. Ejecuta tu lógica actual
+
+                              window.scrollTo({
+                                // 2. Sube la pantalla al inicio
+                                top: 0,
+                                behavior: "smooth", // Movimiento fluido y agradable
+                              });
+                            }}
                             aria-label={`Asignar alumna a las ${h.hora}`}
                             style={{
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              width: 28, height: 28, borderRadius: "50%", border: "none", cursor: "pointer",
-                              background: palette.moss, color: "#fff", flexShrink: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: 28,
+                              height: 28,
+                              borderRadius: "50%",
+                              border: "none",
+                              cursor: "pointer",
+                              background: palette.moss,
+                              color: "#fff",
+                              flexShrink: 0,
                             }}
                           >
                             <Plus size={16} />
@@ -129,16 +225,37 @@ export default function AdminAgenda() {
             </div>
           )}
         />
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16, fontSize: 12, color: palette.inkSoft, fontWeight: 600 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 16,
+            flexWrap: "wrap",
+            marginTop: 16,
+            fontSize: 12,
+            color: palette.inkSoft,
+            fontWeight: 600,
+          }}
+        >
           <Referencia color={palette.mossSoft} label="Hay lugar" />
           <Referencia color={palette.dangerSoft} label="Completo" />
           <Referencia color="#F0EDE3" label="Bloqueado / cerrado" />
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0 12px", color: palette.inkSoft }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          margin: "4px 0 12px",
+          color: palette.inkSoft,
+        }}
+      >
         <Clock size={14} />
-        <p style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>Atención: lunes a sábado, 9 a 13 hs y 15 a 21 hs · 6 lugares por horario</p>
+        <p style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
+          Atención: lunes a sábado, 9 a 13 hs y 15 a 21 hs · 6 lugares por
+          horario
+        </p>
       </div>
 
       <CancelSlotPanel />

@@ -110,7 +110,6 @@ export default function ProfilePanel({
   const guardarEdicion = async () => {
     if (!datos.id) return;
     setGuardando(true);
-    console.log('pasando por form', form);
     setErrorEdicion(null);
     const res = await fetch(`/api/admin/users/${datos.id}`, {
       method: "PATCH",
@@ -118,7 +117,6 @@ export default function ProfilePanel({
       body: JSON.stringify(form),
     });
     const data = await res.json();
-    console.log('data', data);
     setGuardando(false);
     if (!res.ok) { setErrorEdicion(data.error); return; }
     setDatos((prev) => ({ ...prev, ...data }));
@@ -162,7 +160,7 @@ export default function ProfilePanel({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: palette.card, borderRadius: "0 0 20px 20px", padding: 22, width: "100%", boxShadow: "-8px 0 30px rgba(0,0,0,0.12)" }}
+        style={{ background: palette.card, borderRadius: "0 0 20px 20px", padding: 22, width: "100%", maxHeight: "100dvh", overflowY: "auto", boxShadow: "-8px 0 30px rgba(0,0,0,0.12)" }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -190,16 +188,13 @@ export default function ProfilePanel({
             <input style={{ ...inputStyle, marginBottom: 8 }} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
             <input style={{ ...inputStyle, marginBottom: 10 }} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
             {errorEdicion && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorEdicion}</p>}
-            <button
-              onClick={() => { onClose(); router.push("/cambiar-password"); }}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", margin: "10px 0",
-                background: "none", border: "none", color: palette.inkSoft, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: "0 0 10px",
-              }}
-            >
-              Cambiar contraseña
-            </button>
-            <div style={{ display: "flex", gap: 8 }}> 
+             <button
+                onClick={() => { onClose(); router.push("/cambiar-password"); }}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.mossDark, fontWeight: 700, fontSize: 14, cursor: "pointer", padding: "10px 0 16px" }}
+              >
+                Cambiar contraseña
+              </button>
+            <div style={{ display: "flex", gap: 8 }}>
               <button
                 onClick={guardarEdicion}
                 disabled={guardando}
@@ -256,7 +251,6 @@ export default function ProfilePanel({
             >
               <Pencil size={13} /> Editar datos
             </button>
-            
           )
         )}
 
@@ -266,15 +260,15 @@ export default function ProfilePanel({
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              display: "flex", alignItems: "center", gap: 8, textDecoration: "none",
-              color: `${palette.ink}`, fontWeight: 700, fontSize: 14, borderRadius: 12, marginBottom: 20,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none",
+              background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 14, padding: "12px 16px", borderRadius: 12, marginBottom: 10,
             }}
           >
-            <WhatsAppIcon size={17} /> {escribiendoleAOtraPersona ? `Escribirle a ${datos.nombre} por WhatsApp` : "Escribir a Monte"}
+            <WhatsAppIcon size={16} color="#fff" /> {escribiendoleAOtraPersona ? `Escribirle a ${datos.nombre} por WhatsApp` : "Escribir a Monte"}
           </a>
         )}
 
-        {planMensual && !modificandoDias && !editando && (
+        {planMensual && !modificandoDias && (
           <div style={{ padding: "10px 12px", borderRadius: 10, background: palette.mossSoft, marginBottom: 10 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: palette.mossDark, margin: "0 0 4px" }}>{planMensual.nombre}</p>
             <p style={{ fontSize: 13, color: palette.ink, margin: "0 0 10px" }}>
@@ -350,13 +344,13 @@ export default function ProfilePanel({
           </div>
         )}
 
-        {planMensual && !editando && (
+        {planMensual && (
           <button
             className="btn-anim"
             onClick={() => setConfirmando(true)}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-              background: "none", border: `1.5px solid ${palette.ink}`, color: palette.ink, fontWeight: 700, fontSize: 14,
+              background: "none", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 14,
               padding: "12px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10,
             }}
           >
@@ -364,7 +358,7 @@ export default function ProfilePanel({
           </button>
         )}
 
-        {escribiendoleAOtraPersona && datos.id && !editando &&(
+        {escribiendoleAOtraPersona && datos.id && editando &&(
           avisoReset ? (
             <p style={{ fontSize: 12.5, color: palette.mossDark, background: palette.mossSoft, borderRadius: 10, padding: "10px 12px", margin: "0 0 10px" }}>
               {avisoReset}
@@ -388,7 +382,7 @@ export default function ProfilePanel({
           <button
             onClick={() => { onClose(); router.push("/cambiar-password"); }}
             style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
               background: "none", border: "none", color: palette.inkSoft, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: "0 0 10px",
             }}
           >

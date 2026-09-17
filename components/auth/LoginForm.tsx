@@ -9,7 +9,7 @@ import { inputStyle } from "../ui";
 
 export default function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("usuario@montepilates.demo");
+  const [identificador, setIdentificador] = useState("usuario@montepilates.com");
   const [password, setPassword] = useState("Demo1234");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function LoginForm() {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ identificador, password }),
     });
     const data = await res.json();
     setLoading(false);
@@ -36,10 +36,10 @@ export default function LoginForm() {
       <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 600, margin: "8px 0 20px", color: palette.moss }}>Ingresá a tu cuenta</h1>
       <div style={card}>
         <ErrorBanner message={error} />
-        <Field label="Email">
+        <Field label="Email o teléfono">
           <div style={{ position: "relative" }}>
             <Mail size={17} color={palette.inkSoft} style={{ position: "absolute", left: 13, top: 14 }} />
-            <input style={{ ...inputStyle, paddingLeft: 40 }} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nombre@correo.com" />
+            <input style={{ ...inputStyle, paddingLeft: 40 }} value={identificador} onChange={(e) => setIdentificador(e.target.value)} placeholder="nombre@correo.com o tu teléfono" />
           </div>
         </Field>
        <Field label="Contraseña">
@@ -86,13 +86,16 @@ export default function LoginForm() {
         <p style={{ textAlign: "center", fontSize: 14, margin: "0 0 6px" }}>
           <a href="#" style={{ color: palette.moss, fontWeight: 700, textDecoration: "none" }}>Olvidé mi contraseña</a>
         </p>
+        <p style={{ textAlign: "center", fontSize: 13, margin: "0 0 6px", color: palette.inkSoft }}>
+          ¿Tu profesora te cargó como alumna? Tu contraseña inicial son los números de tu teléfono, sin espacios ni guiones.
+        </p>
         <p style={{ textAlign: "center", fontSize: 14, margin: 0, color: palette.inkSoft }}>
           ¿No tenés cuenta?{" "}
           <a href="#" onClick={(e) => { e.preventDefault(); router.push("/registro"); }} style={{ color: palette.moss, fontWeight: 700, textDecoration: "none" }}>Creá una</a>
         </p>
       </div>
       <p style={{ fontSize: 12, color: palette.inkSoft, textAlign: "center", marginTop: 16 }}>
-        Cuentas de prueba: admin@montepilates.demo usuario@montepilates.demo (contraseña Demo1234)
+        Cuentas de prueba: usuario@montepilates.com (contraseña Demo1234)
       </p>
     </div>
   );

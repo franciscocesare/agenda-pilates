@@ -7,7 +7,6 @@ export type HorarioDia = {
   /** Solo viene del endpoint de admin (/api/admin/calendar-day), nunca del público. */
   alumnas?: { id: string; nombre: string; nombreCompleto: string; pendiente: boolean }[];
 };
-
 /**
  * Fila de un horario dentro del panel desplegable de un día: la hora a
  * la izquierda y, a la derecha, lo que corresponda (botón de acción o

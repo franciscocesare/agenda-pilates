@@ -19,4 +19,5 @@ Gemfile.lock
 node_modules
 .next
 .env
+.DS_Store
 *.log

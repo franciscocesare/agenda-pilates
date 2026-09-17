@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Wallet, X, User, MessageCircle, CalendarX, Users, Search, Mail, Phone } from "lucide-react";
+import { ChevronDown, Wallet, X, User, MessageCircle, CalendarX, Users, Search, Mail, Phone, UserPlus, UserCircle } from "lucide-react";
 import { FONT_DISPLAY, palette, card, inputStyle } from "../ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import { WhatsAppIcon } from "../WhatsAppIcon";
+import ProfilePanel from "../ProfilePanel";
 
 type Alumno = { id: string; nombre: string; apellido: string; email: string; telefono: string };
 type Pendiente = { id: string; fecha: string; hora: string; user: { id: string; nombre: string; apellido: string; telefono: string } };
@@ -57,9 +58,14 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [datos, setDatos] = useState<Inicio | null>(null);
   const [actualizando, setActualizando] = useState<string | null>(null);
-  const [abiertas, setAbiertas] = useState({ pendientes: false, hoy: false, semana: false, alumnosMes: false, contacto: false });
+  const [abiertas, setAbiertas] = useState({ pendientes: false, hoy: false, semana: false, alumnosMes: false, contacto: false, importar: false });
+  const [textoImportar, setTextoImportar] = useState("");
+  const [importando, setImportando] = useState(false);
+  const [resultadoImportar, setResultadoImportar] = useState<{ creadas: number; duplicadas: string[]; fallidas: { fila: string; motivo: string }[] } | null>(null);
+  const [errorImportar, setErrorImportar] = useState<string | null>(null);
   const [qContacto, setQContacto] = useState("");
   const [resultadosContacto, setResultadosContacto] = useState<Alumno[]>([]);
+  const [perfilAlumno, setPerfilAlumno] = useState<Alumno | null>(null);
 
   useEffect(() => {
     if (qContacto.trim().length < 2) { setResultadosContacto([]); return; }
@@ -89,6 +95,62 @@ export default function AdminDashboard() {
   };
 
   const irAReservasDe = (id: string, nombreCompleto: string) => router.push(`/admin/reservas?userId=${id}&nombre=${encodeURIComponent(nombreCompleto)}`);
+
+  // Cada línea: "Nombre Apellido, Teléfono, Email(opcional)". El
+  // apellido y el email son opcionales (alcanza con "Nombre, Teléfono"
+  // o incluso solo "Nombre" si más adelante se le agrega el teléfono
+  // a mano). Ignora líneas vacías.
+  // Formato ideal: "Nombre Apellido, Teléfono, Email". Pero admite
+  // pegado más informal: sin coma entre nombre y teléfono ("Julia
+  // +54 9 3516 763769"), con coma final vacía ("Julia +54 9..., "),
+  // o teléfono pegado sin espacios — en todos esos casos separa el
+  // teléfono por patrón (un tramo de dígitos/espacios/guiones de al
+  // menos 7 caracteres) en vez de depender de la coma.
+  const REGEX_TELEFONO = /(\+?\d[\d\s-]{6,}\d)\s*$/;
+  const parsearAlumnas = (texto: string) => {
+    return texto
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((linea) => {
+        let partes = linea
+          .split(",")
+          .map((p) => p.trim())
+          .filter((p, i) => !(i > 0 && p === "")); // ignora una coma final vacía
+
+        if (partes.length === 1) {
+          const match = partes[0].match(REGEX_TELEFONO);
+          if (match) {
+            partes = [partes[0].slice(0, match.index).trim(), match[1].trim()];
+          }
+        }
+
+        const [nombreCompleto = "", telefono = "", email = ""] = partes;
+        const [nombre, ...resto] = nombreCompleto.split(/\s+/);
+        const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+        return { nombre: nombre ?? "", apellido: resto.join(" "), telefono: telefono.trim(), email: emailValido };
+      });
+  };
+
+  const alumnasAImportar = parsearAlumnas(textoImportar);
+  const alumnasSinTelefono = alumnasAImportar.filter((a) => !a.telefono);
+
+  const importarAlumnas = async () => {
+    setImportando(true);
+    setErrorImportar(null);
+    setResultadoImportar(null);
+    const conTelefono = alumnasAImportar.filter((a) => a.telefono);
+    const res = await fetch("/api/admin/users/importar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ alumnas: conTelefono }),
+    });
+    const data = await res.json();
+    setImportando(false);
+    if (!res.ok) { setErrorImportar(data.error); return; }
+    setResultadoImportar(data);
+    setTextoImportar("");
+  };
 
   if (!datos) return <p style={{ color: palette.inkSoft, textAlign: "center", padding: 40 }}>Cargando…</p>;
 
@@ -253,27 +315,101 @@ export default function AdminDashboard() {
           {resultadosContacto.map((a) => {
             const numeroWa = a.telefono.replace(/[^\d]/g, "");
             return (
-              <div key={a.id} style={{ padding: "10px 12px", borderRadius: 10, background: palette.bg }}>
-                <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 6px" }}>{a.nombre} {a.apellido}</p>
-                <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: palette.inkSoft, margin: "0 0 3px" }}>
+            <div key={a.id} style={{ padding: "10px 12px", borderRadius: 10, background: palette.bg }}>
+              <p style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, margin: "0 0 6px" }}>
+                {a.nombre} {a.apellido}
+                <button
+                  onClick={() => setPerfilAlumno(a)}
+                  title={`Ver perfil de ${a.nombre} ${a.apellido}`}
+                  style={{ display: "flex", alignItems: "center", background: "none", border: "none", cursor: "pointer", color: palette.moss, padding: 0 }}
+                >
+                  <UserCircle size={20} />
+                </button>
+              </p>       <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: palette.inkSoft, margin: "0 0 3px" }}>
                   <Mail size={12} /> {a.email}
                 </p>
-                <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: palette.inkSoft, margin: "0 0 8px" }}>
+                <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: palette.inkSoft, margin: "0 0 3px" }}>
                   <Phone size={12} /> {a.telefono}
                 </p>
                 <a
                   href={`https://wa.me/${numeroWa}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 12.5, padding: "6px 12px", borderRadius: 8 }}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", color: `${palette.inkSoft}`, fontSize: 12.5, borderRadius: 8 }}
                 >
-                  <WhatsAppIcon size={13} color="#fff" /> Escribirle por WhatsApp
+                  <WhatsAppIcon size={12} /> Escribirle por WhatsApp
                 </a>
               </div>
             );
           })}
         </div>
+        {/* perfil del usuario por si admin quiere editar */}
+        {perfilAlumno && (
+          <ProfilePanel
+            sesion={perfilAlumno}
+            contactoNumero={perfilAlumno.telefono}
+            mostrarLogout={false}
+            onClose={() => setPerfilAlumno(null)}
+            onActualizado={(datos) =>
+              setPerfilAlumno((prev) => (prev ? { ...prev, ...datos } : prev))
+            }
+            // onClasesCanceladas={() => {}}
+            // onDiasModificados={() => {}}
+          />
+        )}
+      </Seccion>
+
+      <Seccion titulo="Importar alumnas" abierta={abiertas.importar} onToggle={() => toggle("importar")}>
+        <p style={{ fontSize: 12.5, color: palette.inkSoft, margin: "0 0 10px" }}>
+          Pegá tu lista, una alumna por línea, así: <strong>Nombre Apellido, Teléfono, Email (opcional)</strong>. El apellido y el email no son obligatorios. Si dos alumnas distintas comparten el mismo teléfono de contacto (ej. dos hermanas), no hay problema. A cada una le queda como contraseña provisoria su propio teléfono — se lo tienen que cambiar antes de poder editar su perfil.
+        </p>
+        <textarea
+          value={textoImportar}
+          onChange={(e) => { setTextoImportar(e.target.value); setResultadoImportar(null); }}
+          placeholder={"Andrea Caire, +54 9 3516 763769\nBeatriz, +54 9 3546 457211"}
+          rows={8}
+          style={{ ...inputStyle, height: "auto", resize: "vertical", fontFamily: "monospace", fontSize: 12.5, marginBottom: 10 }}
+        />
+        {alumnasAImportar.length > 0 && (
+          <p style={{ fontSize: 12, color: palette.inkSoft, margin: "0 0 10px" }}>
+            Detecté {alumnasAImportar.length} línea{alumnasAImportar.length === 1 ? "" : "s"}
+            {alumnasSinTelefono.length > 0 && (
+              <> — <span style={{ color: palette.danger, fontWeight: 700 }}>{alumnasSinTelefono.length} sin teléfono, no se van a importar</span>: {alumnasSinTelefono.map((a) => `${a.nombre} ${a.apellido}`.trim()).join(", ")}</>
+            )}
+          </p>
+        )}
+        {errorImportar && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorImportar}</p>}
+        <button
+          onClick={importarAlumnas}
+          disabled={importando || alumnasAImportar.filter((a) => a.telefono).length === 0}
+          style={{
+            display: "flex", alignItems: "center", gap: 6, background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13,
+            border: "none", borderRadius: 8, padding: "9px 16px", cursor: "pointer",
+            opacity: importando || alumnasAImportar.filter((a) => a.telefono).length === 0 ? 0.6 : 1,
+          }}
+        >
+          <UserPlus size={15} /> {importando ? "Importando…" : "Importar alumnas"}
+        </button>
+
+        {resultadoImportar && (
+          <div style={{ marginTop: 14, padding: 12, borderRadius: 10, background: palette.mossSoft }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: palette.mossDark, margin: "0 0 6px" }}>
+              Se cargaron {resultadoImportar.creadas} alumna{resultadoImportar.creadas === 1 ? "" : "s"}.
+            </p>
+            {resultadoImportar.duplicadas.length > 0 && (
+              <p style={{ fontSize: 12, color: palette.inkSoft, margin: "0 0 4px" }}>
+                Ya existían (no se tocaron): {resultadoImportar.duplicadas.join(", ")}
+              </p>
+            )}
+            {resultadoImportar.fallidas.length > 0 && (
+              <p style={{ fontSize: 12, color: palette.danger, margin: 0 }}>
+                No se pudieron cargar: {resultadoImportar.fallidas.map((f) => f.fila).join(", ")}
+              </p>
+            )}
+          </div>
+        )}
       </Seccion>
     </div>
+    
   );
 }

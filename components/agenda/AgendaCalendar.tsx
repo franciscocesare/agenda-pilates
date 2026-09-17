@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Star, LogIn, MessageCircle } from "lucide-react";
+import { Star, LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FONT_DISPLAY, palette, btnGhost } from "../ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";

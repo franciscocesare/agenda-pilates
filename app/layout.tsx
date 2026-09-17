@@ -17,7 +17,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const user = session
     ? await prisma.user.findUnique({
         where: { id: session.userId },
-        select: { id: true, nombre: true, apellido: true, rol: true, email: true, telefono: true },
+        select: { id: true, nombre: true, apellido: true, rol: true, email: true, telefono: true, passwordProvisoria: true },
       })
     : null;
 

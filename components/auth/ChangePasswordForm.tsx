@@ -38,7 +38,7 @@ export default function ChangePasswordForm() {
       <div style={card}>
         <ErrorBanner message={error} />
         <Field label="Contraseña actual">
-          <input style={inputStyle} type="password" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} placeholder="Tu teléfono, sin espacios ni guiones" />
+          <input style={inputStyle} type="password" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} placeholder="Ingrese su contraseña actual" />
         </Field>
         <Field label="Contraseña nueva">
           <input style={inputStyle} type="password" value={passwordNueva} onChange={(e) => setPasswordNueva(e.target.value)} placeholder="Mínimo 8 caracteres" />
@@ -46,7 +46,7 @@ export default function ChangePasswordForm() {
         <Field label="Repetir contraseña nueva">
           <input style={inputStyle} type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} />
         </Field>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 8, marginTop: 10 }}>
         <button style={{ ...btnPrimary, opacity: loading ? 0.7 : 1 }} disabled={loading} onClick={submit}>
           {loading ? "Guardando…" : "Cambiar contraseña"}
         </button>

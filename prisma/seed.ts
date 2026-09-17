@@ -30,7 +30,7 @@ async function main() {
   // --- Horarios de atención: fijos, no editables desde el panel admin ---
   // Lunes a sábado, de 9 a 13 y de 15 a 21. Domingo cerrado.
   const franjas = [1, 2, 3, 4, 5, 6].flatMap((dia) => [
-    { diaSemana: dia, horaInicio: "09:00", horaFin: "13:00" },
+    { diaSemana: dia, horaInicio: "08:00", horaFin: "13:00" },
     { diaSemana: dia, horaInicio: "15:00", horaFin: "21:00" },
   ]);
   for (const f of franjas) {
@@ -46,7 +46,7 @@ async function main() {
       nombre: "Clase suelta",
       tipo: "SUELTA",
       clasesIncluidas: 1,
-      precio: 0,
+      precio: 30,
       duracionDias: 30,
       activo: true,
     },
@@ -56,7 +56,7 @@ async function main() {
       nombre: "Bono 4 clases sueltas",
       tipo: "SUELTA",
       clasesIncluidas: 4,
-      precio: 0,
+      precio: 120,
       duracionDias: 60,
       activo: true,
     },
@@ -66,7 +66,8 @@ async function main() {
       nombre: "Mensual 1 vez por semana",
       tipo: "MENSUAL",
       clasesPorSemana: 1,
-      precio: 0,
+      clasesIncluidas: 1,
+      precio: 30,
       duracionDias: 30,
       activo: true,
     },
@@ -76,7 +77,8 @@ async function main() {
       nombre: "Mensual 2 veces por semana",
       tipo: "MENSUAL",
       clasesPorSemana: 2,
-      precio: 0,
+      clasesIncluidas: 2,
+      precio: 60,
       duracionDias: 30,
       activo: true,
     },
@@ -86,7 +88,8 @@ async function main() {
       nombre: "Mensual 3 veces por semana",
       tipo: "MENSUAL",
       clasesPorSemana: 3,
-      precio: 0,
+      clasesIncluidas: 3,
+      precio: 90,
       duracionDias: 30,
       activo: true,
     },
@@ -98,9 +101,19 @@ async function main() {
   await prisma.user.create({
     data: {
       nombre: "Mariana",
-      apellido: "Administradora",
-      email: "admin@montepilates.demo",
-      telefono: "1100000200",
+      apellido: "Olivares",
+      email: "mari@montepilates.com",
+      telefono: "+5491165974062",
+      passwordHash,
+      rol: "ADMIN",
+    },
+  });
+  await prisma.user.create({
+    data: {
+      nombre: "Admin",
+      apellido: "admin",
+      email: "admin@montepilates.com",
+      telefono: "+5491165974062",
       passwordHash,
       rol: "ADMIN",
     },
@@ -110,7 +123,7 @@ async function main() {
     data: {
       nombre: "Usuario",
       apellido: "Demo",
-      email: "usuario@montepilates.demo",
+      email: "usuario@montepilates.com",
       telefono: "1100000300",
       passwordHash,
       rol: "CLIENTE",
@@ -118,8 +131,8 @@ async function main() {
   });
 
   console.log("Listo. Credenciales (NO usar en producción):");
-  console.log("  Admin: admin@montepilates.demo   / Demo1234");
-  console.log("  User:  usuario@montepilates.demo / Demo1234");
+  console.log("  Admin: mari@montepilates.com   / Demo1234");
+  console.log("  User:  usuario@montepilates.com / Demo1234");
 }
 
 main()

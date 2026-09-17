@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarX, MessageCircle, Sparkles } from "lucide-react";
+import { CalendarX, Sparkles } from "lucide-react";
 import { FONT_DISPLAY, palette, btnPrimary, btnSecondary, btnGhost, card, fmtLarga } from "../ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ErrorBanner from "../ErrorBanner";
+import { WhatsAppIcon } from "../WhatsAppIcon";
 
 type Turno = { id: string; fecha: string; hora: string; estado: string; recurringReservationId: string | null };
 type Credito = { id: string; clasesDisponibles: number; esCredito: boolean; vencimiento: string };
@@ -119,7 +120,7 @@ export default function MyAppointments() {
             rel="noopener noreferrer"
             style={{ ...btnSecondary, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
           >
-            <MessageCircle size={17} color="#25D366" /> Escribir por WhatsApp
+            <WhatsAppIcon size={16} color="#25D366" /> Escribir por WhatsApp
           </a>
         </div>
       ) : (
