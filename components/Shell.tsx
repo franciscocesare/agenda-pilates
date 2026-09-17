@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Calendar, Clock, LayoutGrid, Users, Home } from "lucide-react";
+import { Calendar, Clock, LayoutGrid, Users, Home, UserCircleIcon } from "lucide-react";
 import { FONT, FONT_DISPLAY, palette, btnGhost } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ProfilePanel from "./ProfilePanel";
@@ -66,9 +66,9 @@ export default function Shell({ children, session }: { children: ReactNode; sess
               onClick={() => setPerfilAbierto(true)}
               style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", color: palette.inkSoft, fontSize: 14, fontWeight: 600 }}
             >
-              <span className="hide-on-mobile" style={{ fontWeight: 700, color: palette.ink }}>{session.nombre}</span>
+              <span style={{ fontWeight: 700, color: palette.ink }}>{session.nombre}</span>
               <div style={{ width: 38, height: 38, borderRadius: "50%", background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", color: palette.moss, fontWeight: 700, fontSize: 13 }}>
-                {initials}
+                <UserCircleIcon size={32} strokeWidth={1.5} />
               </div>
             </button>
           ) : (
