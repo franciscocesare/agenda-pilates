@@ -6,7 +6,7 @@ import { Calendar, Clock, LayoutGrid, Users, Home } from "lucide-react";
 import { FONT, FONT_DISPLAY, palette, btnGhost } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ProfilePanel from "./ProfilePanel";
-import { WhatsAppIcon } from "./WhatsAppIcon";
+import { WhatsAppIcon } from "./Icons/WhatsAppIcon";
 
 type Sesion = { id: string; nombre: string; apellido: string; rol: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null; passwordProvisoria?: boolean } | null;
 

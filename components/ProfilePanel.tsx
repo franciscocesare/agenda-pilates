@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { X, LogOut, Mail, Phone, User, CalendarX, Pencil, CalendarDays, KeyRound } from "lucide-react";
 import { FONT_DISPLAY, palette, inputStyle, DIAS_LARGO, HORARIOS_BASE } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
-import { WhatsAppIcon } from "./WhatsAppIcon";
+import { WhatsAppIcon } from "./Icons/WhatsAppIcon";
 
 type Sesion = { id?: string; nombre: string; apellido: string; rol?: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null; passwordProvisoria?: boolean };
 type PlanMensualInfo = {
@@ -231,7 +231,7 @@ export default function ProfilePanel({
           </div>
         )}
 
-        {!editando && datos.id && (
+        {datos.id && !editando &&(
           !escribiendoleAOtraPersona && datos.passwordProvisoria ? (
             <div style={{ padding: "10px 12px", borderRadius: 10, background: palette.claySoft, marginBottom: 16 }}>
               <p style={{ fontSize: 12.5, color: palette.clayDark, margin: "0 0 8px", fontWeight: 600 }}>

@@ -4,11 +4,12 @@ import {
   ArrowRight, MapPin, Target, Award, Users2, CalendarCheck,
   CalendarDaysIcon,
   UserCheck2,
+  UserCircle,
 } from "lucide-react";
 import { FONT_DISPLAY, palette, btnPrimary, btnSecondary, card } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
-import { InstagramIcon } from "./InstagramIcon";
-import { WhatsAppIcon } from "./WhatsAppIcon";
+import { InstagramIcon } from "./Icons/InstagramIcon";
+import { WhatsAppIcon } from "./Icons/WhatsAppIcon";
 import Reveal from "./Reveal";
 
 const waHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
@@ -72,9 +73,10 @@ const COMPARACION = {
 };
 
 const PASOS = [
-  { icon: CalendarDaysIcon, titulo: "Ves la agenda y elegis día", texto: "Elegís si clases sueltas o un plan mensual. Se paga en el estudio o se coordina por WhatsApp." },
+  { icon: CalendarDaysIcon, titulo: "Ves la agenda y elegis día", texto: "En el horario que te sirve, si hay lugar,  un boton te lleva a pedir ese turno." },
   { icon: CalendarCheck, titulo: "La profesora confirma día y horario", texto: "Vos mirás la disponibilidad en la Agenda, administración confirma lugar y fija el día y la hora." },
-  { icon: UserCheck2, titulo: "Vas a tu clase", texto: "Iniciás sesión cuando quieras para ver tus próximos turnos, o cancelar con más de 3 horas de anticipación sin perder el crédito." },
+  { icon: UserCircle, titulo: "Login", texto: "Iniciás sesión cuando quieras para ver tus próximos turnos, o cancelar con más de 3 horas de anticipación sin perder el crédito." },
+  { icon: UserCheck2, titulo: "Vas a tu clase", texto: "Las clases se realizan en el orden y la progresión que diseñó Joseph Pilates." },
 ];
 
 export default function Home() {
@@ -109,14 +111,14 @@ export default function Home() {
             <SpringDivider />
           </div>
         </div>
-<div
-className="float-anim"
-  style={{
-    borderRadius: 28,
-    minHeight: 340,
-    position: "relative",
-    overflow: "hidden",
-    backgroundImage: `
+        <div
+          className="float-anim"
+          style={{
+            borderRadius: 28,
+            minHeight: 340,
+            position: "relative",
+            overflow: "hidden",
+            backgroundImage: `
       linear-gradient(
         165deg,
         rgba(60, 85, 65, 0.25) 0%,
@@ -124,187 +126,187 @@ className="float-anim"
       ),
       url('/img/cuadro-joseph.jpg')
     `,
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    boxShadow: "0 30px 60px -20px rgba(78,51,37,0.45)",
-  }}
->
-  <div
-    style={{
-      position: "absolute",
-      left: 24,
-      right: 24,
-      bottom: 24,
-      color: "#fff",
-    }}
-  >
-    <p
-      style={{
-        fontFamily: FONT_DISPLAY,
-        fontStyle: "italic",
-        fontSize: 20,
-        margin: "0 0 6px",
-      }}
-    >
-      “Contrology is complete coordination of body, mind and spirit.”
-    </p>
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            boxShadow: "0 30px 60px -20px rgba(78,51,37,0.45)",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: 24,
+              right: 24,
+              bottom: 24,
+              color: "#fff",
+            }}
+          >
+            <p
+              style={{
+                fontFamily: FONT_DISPLAY,
+                fontStyle: "italic",
+                fontSize: 20,
+                margin: "0 0 6px",
+              }}
+            >
+              “Contrology is complete coordination of body, mind and spirit.”
+            </p>
 
-    <p
-      style={{
-        fontSize: 13,
-        opacity: 0.75,
-        margin: 0,
-      }}
-    >
-      — Joseph Pilates
-    </p>
-  </div>
-</div>
+            <p
+              style={{
+                fontSize: 13,
+                opacity: 0.75,
+                margin: 0,
+              }}
+            >
+              — Joseph Pilates
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* ---------- QUIÉNES SOMOS ---------- */}
       <section id="quienes-somos" className="landing-section">
         <Reveal>
-        <div style={{ display: "inline-block", gridTemplateColumns: "0.9fr 1.1fr", gap: 40, alignItems: "center" }} className="compare-grid">
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Quiénes somos</p>
-             <Reveal delay={80}>
-            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: "0 0 18px" }}>
-              Un estudio chico, pensado para hacer las cosas bien.
-            </h2>
-            </Reveal>
+          <div style={{ display: "inline-block", gridTemplateColumns: "0.9fr 1.1fr", gap: 40, alignItems: "center" }} className="compare-grid">
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Quiénes somos</p>
+              <Reveal delay={80}>
+                <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: "0 0 18px" }}>
+                  Un estudio chico, pensado para hacer las cosas bien.
+                </h2>
+              </Reveal>
+            </div>
+            <div>
+              <Reveal delay={80}>
+                <p style={{ fontSize: 16, lineHeight: 1.7, color: palette.ink, margin: "0 0 16px" }}>
+                  Monte Pilates nace en Villa Ciudad Parque con una idea simple: enseñar el método de Pilates tal como fue creado, con aparatos originales y grupos reducidos, en un lugar donde el entorno también forma parte de la clase.
+                  Mi nombre es Mariana Olivares y soy la instructora a cargo, me forme en la UNA en Buenos Aires y en el estudio de Joseph Pilates en Nueva York. Llevo más de 10 años enseñando el método clásico, y me apasiona que cada alumna pueda progresar a su ritmo, con seguridad y precisión.
+                </p>
+                <p style={{ fontSize: 16, lineHeight: 1.7, color: palette.inkSoft, margin: 0 }}>
+                  No damos clases masivas ni mezclamos disciplinas. Cada alumna tiene su progresión, su nivel y su seguimiento — la profesora conoce tu cuerpo, no solo tu nombre en una lista.
+                </p>
+              </Reveal>
+            </div>
           </div>
-          <div>
-             <Reveal delay={80}>
-            <p style={{ fontSize: 16, lineHeight: 1.7, color: palette.ink, margin: "0 0 16px" }}>
-              Monte Pilates nace en Villa Ciudad Parque con una idea simple: enseñar el método de Pilates tal como fue creado, con aparatos originales y grupos reducidos, en un lugar donde el entorno también forma parte de la clase.
-              Mi nombre es Mariana Olivares y soy la instructora a cargo, me forme en la UNA en Buenos Aires y en el estudio de Joseph Pilates en Nueva York. Llevo más de 10 años enseñando el método clásico, y me apasiona que cada alumna pueda progresar a su ritmo, con seguridad y precisión.
-            </p>
-            <p style={{ fontSize: 16, lineHeight: 1.7, color: palette.inkSoft, margin: 0 }}>
-              No damos clases masivas ni mezclamos disciplinas. Cada alumna tiene su progresión, su nivel y su seguimiento — la profesora conoce tu cuerpo, no solo tu nombre en una lista.
-            </p>
-            </Reveal>
-          </div>
-        </div>
         </Reveal>
       </section>
 
       {/* ---------- BENEFICIOS ---------- */}
       <section id="beneficios" className="landing-section" style={{ background: palette.card, borderRadius: 32 }}>
-         <Reveal>
-        <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto 44px" }}>
-           <Reveal>
-          <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Por qué clásico</p>
-          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: "0 0 14px" }}>
-            El pilates clásico no es una variante más.
-          </h2>
-          </Reveal>
-           <Reveal>
-          <p style={{ fontSize: 16, color: palette.inkSoft, lineHeight: 1.6, margin: 0 }}>
-            Es el método original — y trabaja distinto al pilates "moderno" que se ve en la mayoría de los gimnasios. 
-            Secuencia fija de ~34 ejercicios, en el orden original, Aparatos originales: reformer, cadillac, silla, barril. 
-            Foco en respiración, control y precisión del movimiento. Al detalle
-          </p>
-          </Reveal>
-        </div>
-        <div className="benefits-grid">
-          {BENEFICIOS.map((b, i) => (
-            <Reveal key={b.titulo} delay={i * 90}>
-            <div className="hover-lift" style={{ ...card, height: "100%", background: palette.bg, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "32px 24px" }}>
-              <div className="icon-pop" style={{ width: 44, height: 44, borderRadius: 12, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-                <b.icon size={21} color={palette.moss} />
-              </div>
-              <Reveal key={b.titulo} delay={i * 90}>
-              <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 8px", color: palette.mossDark }}>{b.titulo}</p>
-              <p style={{ fontSize: 14, color: palette.inkSoft, margin: 0, lineHeight: 1.55 }}>{b.texto}</p>
-              </Reveal>
-            </div>
+        <Reveal>
+          <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto 44px" }}>
+            <Reveal>
+              <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Por qué clásico</p>
+              <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: "0 0 14px" }}>
+                El pilates clásico no es una variante más.
+              </h2>
             </Reveal>
-          ))}
-        </div>
-          </Reveal>
+            <Reveal>
+              <p style={{ fontSize: 16, color: palette.inkSoft, lineHeight: 1.6, margin: 0 }}>
+                Es el método original — y trabaja distinto al pilates "moderno" que se ve en la mayoría de los gimnasios.
+                Secuencia fija de ~34 ejercicios, en el orden original, Aparatos originales: reformer, cadillac, silla, barril.
+                Foco en respiración, control y precisión del movimiento. Al detalle
+              </p>
+            </Reveal>
+          </div>
+          <div className="benefits-grid">
+            {BENEFICIOS.map((b, i) => (
+              <Reveal key={b.titulo} delay={i * 90}>
+                <div className="hover-lift" style={{ ...card, height: "100%", background: palette.bg, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "32px 24px" }}>
+                  <div className="icon-pop" style={{ width: 44, height: 44, borderRadius: 12, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                    <b.icon size={21} color={palette.moss} />
+                  </div>
+                  <Reveal key={b.titulo} delay={i * 90}>
+                    <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 8px", color: palette.mossDark }}>{b.titulo}</p>
+                    <p style={{ fontSize: 14, color: palette.inkSoft, margin: 0, lineHeight: 1.55 }}>{b.texto}</p>
+                  </Reveal>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </Reveal>
       </section>
 
       {/* ---------- CÓMO FUNCIONA / AGENDA CTA ---------- */}
       <section id="agenda" className="landing-section">
-        <Reveal> 
-        <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto 44px" }}>
-          <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Cómo funciona</p>
-          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: 0 }}>
-            Vos mirás la disponibilidad. Nosotras coordinamos el turno.
-          </h2>
-        </div>
-</Reveal>
+        <Reveal>
+          <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto 44px" }}>
+            <p style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: palette.moss, margin: "0 0 10px" }}>Cómo funciona</p>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 32, fontWeight: 600, color: palette.mossDark, margin: 0 }}>
+              Vos mirás la disponibilidad. Nosotras coordinamos el turno.
+            </h2>
+          </div>
+        </Reveal>
         <div className="steps-grid">
           {PASOS.map((p, i) => (
-             <Reveal key={p.titulo} delay={i * 90}>
-            <div key={p.titulo} style={{ textAlign: "center" }}>
-              <div className="hover-lift" style={{ width: 54, height: 54, borderRadius: 16, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                <p.icon className="icon-pop" size={24} color={palette.moss} />
+            <Reveal key={p.titulo} delay={i * 90}>
+              <div key={p.titulo} style={{ textAlign: "center" }}>
+                <div className="hover-lift" style={{ width: 54, height: 54, borderRadius: 16, background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                  <p.icon className="icon-pop" size={24} color={palette.moss} />
+                </div>
+                <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 8px", color: palette.mossDark }}>{i + 1}. {p.titulo}</p>
+                <p style={{ fontSize: 14, color: palette.inkSoft, margin: 0, lineHeight: 1.55, maxWidth: 280, marginLeft: "auto", marginRight: "auto" }}>{p.texto}</p>
               </div>
-              <p style={{ fontWeight: 700, fontSize: 16, margin: "0 0 8px", color: palette.mossDark }}>{i + 1}. {p.titulo}</p>
-              <p style={{ fontSize: 14, color: palette.inkSoft, margin: 0, lineHeight: 1.55, maxWidth: 280, marginLeft: "auto", marginRight: "auto" }}>{p.texto}</p>
-            </div>
             </Reveal>
           ))}
         </div>
- <Reveal>
-        <div style={{ ...card, marginTop: 48, textAlign: "center", padding: "40px 24px", background: `linear-gradient(180deg, ${palette.moss}E6 0%, ${palette.mossDark}E6 100%)`, border: "none" }}>
-          <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 600, color: "#fff", margin: "0 0 10px" }}>¿Hay lugar esta semana?</h3>
-          <p style={{ color: "rgba(255,255,255,0.8)", margin: "0 0 24px", fontSize: 15 }}>Mirá el mes completo y en cada dia, los horarios, pedinos el día que te quede mejor.</p>
-          <button className="btn-anim" style={{ ...btnPrimary, width: "auto", padding: "15px 28px", margin: "0 auto", background: palette.clay }} onClick={() => router.push("/agenda")}>
-            Ver la agenda <ArrowRight className="arrow-nudge" size={18} />
-          </button>
-        </div>
+        <Reveal>
+          <div style={{ ...card, marginTop: 48, textAlign: "center", padding: "40px 24px", background: `linear-gradient(180deg, ${palette.moss}E6 0%, ${palette.mossDark}E6 100%)`, border: "none" }}>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 600, color: "#fff", margin: "0 0 10px" }}>¿Hay lugar esta semana?</h3>
+            <p style={{ color: "rgba(255,255,255,0.8)", margin: "0 0 24px", fontSize: 15 }}>Mirá el mes completo y en cada dia, los horarios, pedinos el día que te quede mejor.</p>
+            <button className="btn-anim" style={{ ...btnPrimary, width: "auto", padding: "15px 28px", margin: "0 auto", background: palette.clay }} onClick={() => router.push("/agenda")}>
+              Ver la agenda <ArrowRight className="arrow-nudge" size={18} />
+            </button>
+          </div>
         </Reveal>
       </section>
 
       {/* ---------- CONTACTO y FOOTER---------- */}
       <Reveal>
-       <footer id="contacto" className="landing-section" style={{ paddingBottom: 0 }}>
-        <div
-         
-          className="footer-card hover-lift"
-          style={{
-            borderRadius: 8, position: "relative", overflow: "hidden",
-            background: `${palette.moss}E6`, color: "#fff",
-          }}
-        >
-          <svg viewBox="0 0 400 60" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 60, opacity: 0.4 }} preserveAspectRatio="none" aria-hidden="true">
-            <path d="M0 30 Q100 5 200 30 T400 30" stroke= "rgba(255, 255, 255, 0.22)" strokeWidth="1" fill="none" />
-          </svg>
+        <footer id="contacto" className="landing-section" style={{ paddingBottom: 0 }}>
+          <div
+
+            className="footer-card hover-lift"
+            style={{
+              borderRadius: 8, position: "relative", overflow: "hidden",
+              background: `${palette.moss}E6`, color: "#fff",
+            }}
+          >
+            <svg viewBox="0 0 400 60" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 60, opacity: 0.4 }} preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0 30 Q100 5 200 30 T400 30" stroke="rgba(255, 255, 255, 0.22)" strokeWidth="1" fill="none" />
+            </svg>
             {/* Marca */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 12, gap: 4 }}>
               <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 21, letterSpacing: 0.5 }}>MONTE</span>
-              <span style={{ fontFamily: FONT_DISPLAY, fontStyle: "italic", fontSize: 14, color: palette.bg}}>Pilates, método clásico</span>
+              <span style={{ fontFamily: FONT_DISPLAY, fontStyle: "italic", fontSize: 14, color: palette.bg }}>Pilates, método clásico</span>
             </div>
-          <div 
-            style={{
-              position: "relative", paddingTop: 18, borderTop: "1px solid rgba(255, 255, 255, 0.22)",
-              display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8,
-            }}
-          >  
-               <a href={waHref} target="_blank" rel="noopener noreferrer" className="btn-anim" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
-            <WhatsAppIcon size={16} /> 3546 567-378
-          </a> 
-          <a href="https://www.instagram.com/monte.pilates" className="btn-anim" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
-            <InstagramIcon size={16} fill={palette.claySoft} /> monte.pilates
-          </a> {/*whatsapp icon*/}
-              <a 
-            className="link-underline"  
-            href="https://maps.app.goo.gl/sz1yhPngBS4qqMay8"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: "flex", gap: 4, alignItems: "flex-start", fontSize: 14, color: palette.bg, lineHeight: 1.6, textDecoration: "none" }}
-          >
-            <MapPin size={16} color={palette.bg} style={{ flexShrink: 0, marginTop: 2 }} />
-            Bv. Los Reartes 705, Villa Ciudad Parque.
-          </a> 
+            <div
+              style={{
+                position: "relative", paddingTop: 18, borderTop: "1px solid rgba(255, 255, 255, 0.22)",
+                display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8,
+              }}
+            >
+              <a href={waHref} target="_blank" rel="noopener noreferrer" className="btn-anim" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
+                <WhatsAppIcon size={16} /> 3546 567-378
+              </a>
+              <a href="https://www.instagram.com/monte.pilates" className="btn-anim" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 14, color: palette.bg, textDecoration: "none" }}>
+                <InstagramIcon size={16} fill={palette.claySoft} /> monte.pilates
+              </a> {/*whatsapp icon*/}
+              <a
+                className="link-underline"
+                href="https://maps.app.goo.gl/sz1yhPngBS4qqMay8"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "flex", gap: 4, alignItems: "flex-start", fontSize: 14, color: palette.bg, lineHeight: 1.6, textDecoration: "none" }}
+              >
+                <MapPin size={16} color={palette.bg} style={{ flexShrink: 0, marginTop: 2 }} />
+                Bv. Los Reartes 705, Villa Ciudad Parque.
+              </a>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
       </Reveal>
-       <p style={{ fontSize: 12, color: palette.inkSoft, textAlign: "center" }}>© {new Date().getFullYear()} Monte Pilates - Valle de Calamuchita - Argentina</p>
+      <p style={{ fontSize: 12, color: palette.inkSoft, textAlign: "center" }}>© {new Date().getFullYear()} Monte Pilates - Valle de Calamuchita - Argentina</p>
     </div>
   );
 }

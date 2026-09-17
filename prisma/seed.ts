@@ -97,6 +97,7 @@ async function main() {
 
   // --- Usuarios ---
   const passwordHash = await bcrypt.hash("Demo1234", 12);
+  const passwordHashAdmin = await bcrypt.hash("Monte1234", 12);
 
   await prisma.user.create({
     data: {
@@ -104,7 +105,7 @@ async function main() {
       apellido: "Olivares",
       email: "mari@montepilates.com",
       telefono: "+5491165974062",
-      passwordHash,
+      passwordHash: passwordHashAdmin,
       rol: "ADMIN",
     },
   });
@@ -114,7 +115,7 @@ async function main() {
       apellido: "admin",
       email: "admin@montepilates.com",
       telefono: "+5491165974062",
-      passwordHash,
+      passwordHash: passwordHashAdmin,
       rol: "ADMIN",
     },
   });

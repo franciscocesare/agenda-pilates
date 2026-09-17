@@ -5,7 +5,7 @@ import { FONT_DISPLAY, palette, card, btnPrimary, btnGhost, inputStyle, fmtLarga
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ManualBookingForm from "./ManualBookingForm";
 import ProfilePanel from "../ProfilePanel";
-import { WhatsAppIcon } from "../WhatsAppIcon";
+import { WhatsAppIcon } from "../Icons/WhatsAppIcon";
 
 type Reserva = {
   id: string; fecha: string; hora: string; estado: string; recurringReservationId: string | null;

@@ -22,7 +22,7 @@ import {
 import { Field } from "../Field";
 import ErrorBanner from "../ErrorBanner";
 import ProfilePanel from "../ProfilePanel";
-import { WhatsAppIcon } from "../WhatsAppIcon";
+import { WhatsAppIcon } from "../Icons/WhatsAppIcon";
 
 type Usuario = {
   id: string;

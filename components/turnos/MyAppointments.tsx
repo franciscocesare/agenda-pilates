@@ -5,7 +5,7 @@ import { CalendarX, Sparkles } from "lucide-react";
 import { FONT_DISPLAY, palette, btnPrimary, btnSecondary, btnGhost, card, fmtLarga } from "../ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import ErrorBanner from "../ErrorBanner";
-import { WhatsAppIcon } from "../WhatsAppIcon";
+import { WhatsAppIcon } from "../Icons/WhatsAppIcon";
 
 type Turno = { id: string; fecha: string; hora: string; estado: string; recurringReservationId: string | null };
 type Credito = { id: string; clasesDisponibles: number; esCredito: boolean; vencimiento: string };

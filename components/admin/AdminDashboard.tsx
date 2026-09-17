@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, Wallet, X, User, MessageCircle, CalendarX, Users, Search, Mail, Phone, UserPlus, UserCircle } from "lucide-react";
 import { FONT_DISPLAY, palette, card, inputStyle } from "../ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
-import { WhatsAppIcon } from "../WhatsAppIcon";
+import { WhatsAppIcon } from "../Icons/WhatsAppIcon";
 import ProfilePanel from "../ProfilePanel";
 
 type Alumno = { id: string; nombre: string; apellido: string; email: string; telefono: string };
