@@ -111,7 +111,7 @@ export default function ProfilePanel({
     setGuardando(true);
     setErrorEdicion(null);
     const res = await fetch(`/api/admin/users/${datos.id}`, {
-    // const res = await fetch(`/api/users/${datos.id}`, {
+      // const res = await fetch(`/api/users/${datos.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -186,6 +186,15 @@ export default function ProfilePanel({
           </div>
           <input name="email" id="perfil-email" autoComplete="email" style={{ ...inputStyle, marginBottom: 8 }} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
           <input name="telefono" id="perfil-telefono" autoComplete="tel" style={{ ...inputStyle, marginBottom: 10 }} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
+          <button
+            onClick={() => { onClose(); router.push("/cambiar-password"); }}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "left", gap: 8, width: "100%",
+              background: "none", border: "none", color: palette.inkSoft, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: "0 0 10px", margin: "10px 0", textDecoration: "underline",
+            }}
+          >
+            Cambiar contraseña
+          </button>
           {errorEdicion && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorEdicion}</p>}
           <div style={{ display: "flex", gap: 8 }}>
             <button
@@ -239,7 +248,10 @@ export default function ProfilePanel({
           ) : (
             <button
               onClick={() => setEditando(true)}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.moss, fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: "0 0 16px" }}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "left", gap: 8, width: "100%",
+                background: "none", border: "none", color: palette.inkSoft, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: "0 0 10px", margin: "10px 0", textDecoration: "underline",
+              }}
             >
               <Pencil size={13} /> Editar datos
             </button>
@@ -370,25 +382,13 @@ export default function ProfilePanel({
           )
         )}
 
-        {mostrarLogout && (
-          <button
-            onClick={() => { onClose(); router.push("/cambiar-password"); }}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-              background: "none", border: "none", color: palette.inkSoft, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: "0 0 10px",
-            }}
-          >
-            Cambiar contraseña
-          </button>
-        )}
-
         {!editando && mostrarLogout && (
           <button
             className="btn-anim"
             onClick={logout}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-              background: "none", border: `1.5px solid ${palette.line}`, color: palette.inkSoft, fontWeight: 700, fontSize: 14,
+              background: "none", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 14,
               padding: "12px 16px", borderRadius: 12, cursor: "pointer",
             }}
           >
@@ -396,7 +396,6 @@ export default function ProfilePanel({
           </button>
         )}
       </div>
-
       {confirmando && (
         <div role="dialog" style={{ position: "fixed", inset: 0, background: "rgba(60,42,32,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 20 }} onClick={(e) => { e.stopPropagation(); if (!cancelando) setConfirmando(false); }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: palette.card, borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 }}>
