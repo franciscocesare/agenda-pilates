@@ -179,8 +179,36 @@ export default function ProfilePanel({
         </div>
 
         {editando ? (
-          <div>
-            <h1>Editando Perfil</h1>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input style={inputStyle} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre" />
+              <input style={inputStyle} value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} placeholder="Apellido" />
+            </div>
+            {/* <input style={{ ...inputStyle, marginBottom: 8 }} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
+            <input style={{ ...inputStyle, marginBottom: 10 }} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" /> */}
+            {errorEdicion && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorEdicion}</p>}
+             <button
+                onClick={() => { onClose(); router.push("/cambiar-password"); }}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.mossDark, fontWeight: 700, fontSize: 14, cursor: "pointer", padding: "10px 0 16px" }}
+              >
+                Cambiar contraseña
+              </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={guardarEdicion}
+                disabled={guardando}
+                style={{ flex: 1, maxWidth: "50%", background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13.5, border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", opacity: guardando ? 0.7 : 1 }}
+              >
+                {guardando ? "Guardando…" : "Guardar cambios"}
+              </button>
+              <button
+                onClick={() => { setEditando(false); setErrorEdicion(null); setForm({ nombre: datos.nombre, apellido: datos.apellido, email: datos.email ?? "", telefono: datos.telefono ?? "" }); }}
+                disabled={guardando}
+                style={{ background: "none", width: "50%", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 13.5, borderRadius: 10, padding: "10px 16px", cursor: "pointer" }}
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
           // <div style={{ marginBottom: 20 }}>
           //   <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
