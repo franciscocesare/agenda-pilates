@@ -1,12 +1,11 @@
 "use client";
 import { AlertTriangle } from "lucide-react";
-import { palette } from "./ui";
 
 export default function ErrorBanner({ message }: { message?: string | null }) {
   if (!message) return null;
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: palette.dangerSoft, color: palette.danger, padding: "12px 14px", borderRadius: 12, marginBottom: 16, fontSize: 14, fontWeight: 600 }}>
-      <AlertTriangle size={17} style={{ flexShrink: 0, marginTop: 1 }} />
+    <div className="mb-4 flex items-start gap-2.5 rounded-lg2 bg-danger-soft px-3.5 py-3 text-sm font-semibold text-danger">
+      <AlertTriangle size={17} className="mt-px shrink-0" />
       <span>{message}</span>
     </div>
   );

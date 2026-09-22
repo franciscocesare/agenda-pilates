@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Clock, Plus, User } from "lucide-react";
-import { FONT_DISPLAY, palette } from "../ui";
+import { Clock, Plus } from "lucide-react";
+import { palette } from "../ui";
 import MonthGrid, { DiaCalendario } from "../agenda/MonthGrid";
 import { HorarioRow, Referencia, HorarioDia } from "../agenda/HorarioRow";
+import AlumnaChip from "../AlumnaChip";
 import ManualBookingForm from "./ManualBookingForm";
 import BlockedDatesPanel from "./BlockedDatesPanel";
 import CancelSlotPanel from "./CancelSlotPanel";
@@ -43,19 +44,11 @@ export default function AdminAgenda() {
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1
-          style={{
-            fontFamily: FONT_DISPLAY,
-            fontSize: 22,
-            fontWeight: 600,
-            margin: "8px 0 2px",
-            color: palette.moss,
-          }}
-        >
+      <div className="mb-5">
+        <h1 className="mb-0.5 mt-2 font-display text-[22px] font-semibold text-moss">
           Agenda
         </h1>
-        <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>
+        <p className="m-0 text-sm text-ink-soft">
           Tocá un día para ver quién va en cada horario y asignarle un turno a
           una alumna. Cada horario tiene 4 lugares propios.
         </p>
@@ -71,7 +64,7 @@ export default function AdminAgenda() {
         />
       )}
 
-      <div style={{ marginBottom: 20 }}>
+      <div className="mb-5">
         <MonthGrid
           diaExpandido={diaSel}
           onToggleDay={onToggleDay}
@@ -79,15 +72,7 @@ export default function AdminAgenda() {
           refreshKey={refreshKey}
           renderPanel={(dia) => (
             <div>
-              <p
-                style={{
-                  fontWeight: 800,
-                  fontSize: 14,
-                  margin: "0 0 12px",
-                  color: palette.mossDark,
-                  textTransform: "capitalize",
-                }}
-              >
+              <p className="m-0 mb-3 text-sm font-extrabold capitalize text-moss-dark">
                 {new Date(dia.fecha + "T00:00:00").toLocaleDateString("es-AR", {
                   weekday: "long",
                   day: "numeric",
@@ -95,14 +80,12 @@ export default function AdminAgenda() {
                 })}
               </p>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="flex flex-col gap-2">
                 {!horarios && (
-                  <p style={{ color: palette.inkSoft, fontSize: 14 }}>
-                    Cargando horarios…
-                  </p>
+                  <p className="text-sm text-ink-soft">Cargando horarios…</p>
                 )}
                 {horarios?.length === 0 && (
-                  <p style={{ color: palette.inkSoft, fontSize: 14 }}>
+                  <p className="text-sm text-ink-soft">
                     Día cerrado — no hay franja horaria configurada.
                   </p>
                 )}
@@ -117,73 +100,25 @@ export default function AdminAgenda() {
                       hora={h.hora}
                       subrow={
                         alumnas.length > 0 ? (
-                          <div
-                            style={{
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: 6,
-                            }}
-                          >
+                          <div className="flex flex-wrap gap-1.5">
                             {alumnas.map((a, i) => (
-                              <button
+                              <AlumnaChip
                                 key={i}
-                                onClick={() =>
-                                  router.push(
-                                    `/admin/reservas?userId=${a.id}&nombre=${encodeURIComponent(a.nombreCompleto)}`,
-                                  )
-                                }
-                                title={`Ver reservas de ${a.nombreCompleto}`}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                  color: a.pendiente
-                                    ? palette.clayDark
-                                    : palette.ink,
-                                  background: a.pendiente
-                                    ? palette.claySoft
-                                    : palette.mossSoft,
-                                  padding: "4px 9px",
-                                  borderRadius: 999,
-                                  border: "none",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                <User size={14} /> {a.nombre}
-                                {a.pendiente ? " · pendiente" : ""}
-                              </button>
+                                alumna={a}
+                                onClick={() => router.push(`/admin/reservas?userId=${a.id}&nombre=${encodeURIComponent(a.nombreCompleto)}`)}
+                                iconSize={14}
+                              />
                             ))}
                           </div>
                         ) : (
-                          <p
-                            style={{
-                              fontSize: 12,
-                              color: palette.inkSoft,
-                              margin: 0,
-                            }}
-                          >
+                          <p className="m-0 text-xs text-ink-soft">
                             Sin alumnas anotadas todavía.
                           </p>
                         )
                       }
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: disponible ? palette.moss : palette.inkSoft,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
+                      <div className="flex items-center gap-2.5">
+                        <span className={`whitespace-nowrap text-xs font-bold ${disponible ? "text-moss" : "text-ink-soft"}`}>
                           {h.cancelado
                             ? "Cancelado"
                             : `${quedan} libre${quedan === 1 ? "" : "s"}`}
@@ -200,19 +135,7 @@ export default function AdminAgenda() {
                               });
                             }}
                             aria-label={`Asignar alumna a las ${h.hora}`}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: 28,
-                              height: 28,
-                              borderRadius: "50%",
-                              border: "none",
-                              cursor: "pointer",
-                              background: palette.moss,
-                              color: "#fff",
-                              flexShrink: 0,
-                            }}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-none bg-moss text-white cursor-pointer"
                           >
                             <Plus size={16} />
                           </button>
@@ -225,34 +148,16 @@ export default function AdminAgenda() {
             </div>
           )}
         />
-        <div
-          style={{
-            display: "flex",
-            gap: 16,
-            flexWrap: "wrap",
-            marginTop: 16,
-            fontSize: 12,
-            color: palette.inkSoft,
-            fontWeight: 600,
-          }}
-        >
+        <div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold text-ink-soft">
           <Referencia color={palette.mossSoft} label="Hay lugar" />
           <Referencia color={palette.dangerSoft} label="Completo" />
           <Referencia color="#F0EDE3" label="Bloqueado / cerrado" />
         </div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          margin: "4px 0 12px",
-          color: palette.inkSoft,
-        }}
-      >
+      <div className="my-1 mb-3 flex items-center gap-2 text-ink-soft">
         <Clock size={14} />
-        <p style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>
+        <p className="m-0 text-[13px] font-bold">
           Atención: lunes a sábado, 9 a 13 hs y 15 a 21 hs · 6 lugares por
           horario
         </p>

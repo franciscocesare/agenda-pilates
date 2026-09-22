@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FONT_DISPLAY, palette, btnPrimary, card, inputStyle } from "../ui";
+import { btnPrimary, card, inputStyle } from "../ui";
 import { Field } from "../Field";
 import ErrorBanner from "../ErrorBanner";
 
@@ -31,33 +31,34 @@ export default function ChangePasswordForm() {
 
   return (
     <div>
-      <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 600, margin: "8px 0 8px", color: palette.moss }}>Cambiar contraseña</h1>
-      <p style={{ color: palette.inkSoft, fontSize: 14, margin: "0 0 20px" }}>
+      <h1 className="mb-2 mt-2 font-display text-[26px] font-semibold text-moss">Cambiar contraseña</h1>
+      <p className="m-0 mb-5 text-sm text-ink-soft">
         Si tu profesora te cargó como alumna, tu contraseña actual son los números de tu teléfono (sin espacios ni guiones). Elegí una contraseña propia para poder editar tu perfil.
       </p>
-      <div style={card}>
+      <form className={card} onSubmit={(e) => { e.preventDefault(); submit(); }}>
         <ErrorBanner message={error} />
         <Field label="Contraseña actual">
-          <input style={inputStyle} type="password" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} placeholder="Ingrese su contraseña actual" />
+          <input name="current-password" autoComplete="current-password" className={inputStyle} type="password" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} placeholder="Ingrese su contraseña actual" />
         </Field>
         <Field label="Contraseña nueva">
-          <input style={inputStyle} type="password" value={passwordNueva} onChange={(e) => setPasswordNueva(e.target.value)} placeholder="Mínimo 8 caracteres" />
+          <input name="new-password" autoComplete="new-password" className={inputStyle} type="password" value={passwordNueva} onChange={(e) => setPasswordNueva(e.target.value)} placeholder="Mínimo 8 caracteres" />
         </Field>
         <Field label="Repetir contraseña nueva">
-          <input style={inputStyle} type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} />
+          <input name="confirm-password" autoComplete="new-password" className={inputStyle} type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} />
         </Field>
-        <div style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 8, marginTop: 10 }}>
-        <button style={{ ...btnPrimary, opacity: loading ? 0.7 : 1 }} disabled={loading} onClick={submit}>
-          {loading ? "Guardando…" : "Cambiar contraseña"}
-        </button>
-           <button
-                onClick={() => router.push("/")}
-                style={{ background: "none", width: "80%", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 13.5, borderRadius: 10, padding: "10px 16px", cursor: "pointer" }}
-              >
-                Cancelar
-              </button>
-              </div>
-      </div>
+        <div className="mt-2.5 flex flex-col items-center gap-2">
+          <button type="submit" className={`${btnPrimary} ${loading ? "opacity-70" : ""}`} disabled={loading}>
+            {loading ? "Guardando…" : "Cambiar contraseña"}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="w-4/5 rounded-md2 border-[1.5px] border-danger bg-transparent px-4 py-2.5 text-[13.5px] font-bold text-danger cursor-pointer"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

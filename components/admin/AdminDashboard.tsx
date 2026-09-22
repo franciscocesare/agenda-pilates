@@ -1,13 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Wallet, X, User, MessageCircle, CalendarX, Users, Search, Mail, Phone, UserPlus, UserCircle } from "lucide-react";
-import { FONT_DISPLAY, palette, card, inputStyle } from "../ui";
-import { WHATSAPP_NUMBER } from "@/lib/constants";
+import { ChevronDown, Wallet, X, MessageCircle, CalendarX, Users, Search, Mail, Phone, UserPlus, UserCircle } from "lucide-react";
+import { palette, card, inputStyle } from "../ui";
+import { buildWaLink, mensajeRecordatorioPago } from "@/lib/whatsapp";
+import { patchReservationEstado } from "@/lib/api/reservations";
+import { useBuscarAlumnas } from "@/lib/hooks/useBuscarAlumnas";
+import type { Alumno } from "@/lib/types";
+import { BRAND } from "@/lib/brand";
 import { WhatsAppIcon } from "../Icons/WhatsAppIcon";
+import AlumnaChip from "../AlumnaChip";
 import ProfilePanel from "../ProfilePanel";
 
-type Alumno = { id: string; nombre: string; apellido: string; email: string; telefono: string };
 type Pendiente = { id: string; fecha: string; hora: string; user: { id: string; nombre: string; apellido: string; telefono: string } };
 type AlumnaHorario = { id: string; nombre: string; nombreCompleto: string; pendiente: boolean };
 type HorarioHoy = { hora: string; cancelado: boolean; alumnas: AlumnaHorario[] };
@@ -24,32 +28,38 @@ const fmtDia = (fecha: string, opts: Intl.DateTimeFormatOptions) =>
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
+// Colores de fondo para el contador de una sección plegable (ej. la
+// cantidad de pendientes de pago), como par [texto, fondo] ya que
+// Tailwind necesita clases completas y no puede construir un color
+// con transparencia agregada en tiempo de ejecución (`color + "22"`).
+const CONTADOR_CLASES: Record<"moss" | "clay", string> = {
+  moss: "text-moss bg-moss-soft",
+  clay: "text-clay-dark bg-clay-soft",
+};
+
 /** Sección plegable: el título siempre se ve, el contenido solo si está abierta. */
 function Seccion({
-  titulo, contador, contadorColor, abierta, onToggle, children,
+  titulo, contador, contadorColor = "moss", abierta, onToggle, children,
 }: {
-  titulo: string; contador?: number; contadorColor?: string; abierta: boolean; onToggle: () => void; children: React.ReactNode;
+  titulo: string; contador?: number; contadorColor?: "moss" | "clay"; abierta: boolean; onToggle: () => void; children: React.ReactNode;
 }) {
   return (
-    <div style={{ ...card, marginBottom: 16, padding: 0, overflow: "hidden" }}>
+    <div className={`${card} mb-4 overflow-hidden p-0`}>
       <button
         onClick={onToggle}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
-          background: "none", border: "none", cursor: "pointer", padding: "16px 18px", textAlign: "left",
-        }}
+        className="flex w-full items-center justify-between border-none bg-transparent px-[18px] py-4 text-left cursor-pointer"
       >
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: palette.ink }}>{titulo}</span>
+        <span className="flex items-center gap-2">
+          <span className="text-sm font-bold text-ink">{titulo}</span>
           {contador !== undefined && contador > 0 && (
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: contadorColor ?? palette.moss, background: (contadorColor ?? palette.moss) + "22", padding: "2px 8px", borderRadius: 999 }}>
+            <span className={`rounded-full px-2 py-0.5 text-[11.5px] font-bold ${CONTADOR_CLASES[contadorColor]}`}>
               {contador}
             </span>
           )}
         </span>
-        <ChevronDown size={18} color={palette.inkSoft} style={{ transform: abierta ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+        <ChevronDown size={18} color={palette.inkSoft} className={`transition-transform duration-150 ${abierta ? "rotate-180" : ""}`} />
       </button>
-      {abierta && <div style={{ padding: "0 18px 18px" }}>{children}</div>}
+      {abierta && <div className="px-[18px] pb-[18px]">{children}</div>}
     </div>
   );
 }
@@ -64,16 +74,8 @@ export default function AdminDashboard() {
   const [resultadoImportar, setResultadoImportar] = useState<{ creadas: number; duplicadas: string[]; fallidas: { fila: string; motivo: string }[] } | null>(null);
   const [errorImportar, setErrorImportar] = useState<string | null>(null);
   const [qContacto, setQContacto] = useState("");
-  const [resultadosContacto, setResultadosContacto] = useState<Alumno[]>([]);
+  const resultadosContacto = useBuscarAlumnas(qContacto);
   const [perfilAlumno, setPerfilAlumno] = useState<Alumno | null>(null);
-
-  useEffect(() => {
-    if (qContacto.trim().length < 2) { setResultadosContacto([]); return; }
-    const t = setTimeout(() => {
-      fetch(`/api/admin/users?q=${encodeURIComponent(qContacto)}`).then((r) => r.json()).then(setResultadosContacto);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [qContacto]);
 
   const toggle = (clave: keyof typeof abiertas) => setAbiertas((prev) => ({ ...prev, [clave]: !prev[clave] }));
 
@@ -85,11 +87,7 @@ export default function AdminDashboard() {
 
   const cambiarEstado = async (id: string, estado: string) => {
     setActualizando(id);
-    await fetch(`/api/admin/reservations/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ estado }),
-    });
+    await patchReservationEstado(id, estado);
     setActualizando(null);
     cargar();
   };
@@ -152,7 +150,7 @@ export default function AdminDashboard() {
     setTextoImportar("");
   };
 
-  if (!datos) return <p style={{ color: palette.inkSoft, textAlign: "center", padding: 40 }}>Cargando…</p>;
+  if (!datos) return <p className="p-10 text-center text-ink-soft">Cargando…</p>;
 
   const hoyDate = new Date(datos.hoy.fecha + "T00:00:00");
   const mesActualNombre = MESES[hoyDate.getMonth()];
@@ -160,30 +158,29 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "8px 0 2px", color: palette.moss }}>Panel administrativo</h1>
-        <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>Resumen general de Monte Pilates</p>
+      <div className="mb-5">
+        <h1 className="m-0 mb-0.5 mt-2 font-display text-[22px] font-semibold text-moss">Panel administrativo</h1>
+        <p className="m-0 text-sm text-ink-soft">Resumen general de {BRAND.nombre}</p>
       </div>
 
-      <Seccion titulo="Pendientes de pago" contador={datos.pendientesDePago.length} contadorColor={palette.clayDark} abierta={abiertas.pendientes} onToggle={() => toggle("pendientes")}>
+      <Seccion titulo="Pendientes de pago" contador={datos.pendientesDePago.length} contadorColor="clay" abierta={abiertas.pendientes} onToggle={() => toggle("pendientes")}>
         {datos.pendientesDePago.length === 0 ? (
-          <p style={{ fontSize: 13, color: palette.inkSoft, margin: 0 }}>No hay ninguna clase pendiente de pago.</p>
+          <p className="m-0 text-[13px] text-ink-soft">No hay ninguna clase pendiente de pago.</p>
         ) : (
           datos.pendientesDePago.map((p) => {
             const enCurso = actualizando === p.id;
-            const texto = `¡Hola ${p.user.nombre}! Te recuerdo tu clase del ${fmtDia(p.fecha, { day: "numeric", month: "long" })} a las ${p.hora} hs — todavía me falta el pago de esa clase suelta para confirmártela 🌿`;
-            const linkWa = `https://wa.me/${p.user.telefono.replace(/[^\d]/g, "") || WHATSAPP_NUMBER}?text=${encodeURIComponent(texto)}`;
+            const linkWa = buildWaLink(p.user.telefono, mensajeRecordatorioPago(p.user.nombre, fmtDia(p.fecha, { day: "numeric", month: "long" }), p.hora));
             return (
-              <div key={p.id} style={{ padding: "10px 0", borderTop: `1px solid ${palette.line}` }}>
-                <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 2px" }}>{p.user.nombre} {p.user.apellido}</p>
-                <p style={{ fontSize: 12.5, color: palette.inkSoft, margin: "0 0 8px", textTransform: "capitalize" }}>
+              <div key={p.id} className="border-t border-line py-2.5">
+                <p className="m-0 mb-0.5 text-sm font-bold">{p.user.nombre} {p.user.apellido}</p>
+                <p className="m-0 mb-2 text-[12.5px] capitalize text-ink-soft">
                   {fmtDia(p.fecha, { weekday: "long", day: "numeric", month: "long" })} · {p.hora} hs
                 </p>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => cambiarEstado(p.id, "CONFIRMAR_PAGO")}
                     disabled={enCurso}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: `1.5px solid ${palette.moss}`, color: palette.moss, fontWeight: 700, fontSize: 12.5, borderRadius: 8, padding: "6px 12px", cursor: "pointer", opacity: enCurso ? 0.6 : 1 }}
+                    className={`flex items-center gap-1.5 rounded-md2 border-[1.5px] border-moss bg-transparent px-3 py-1.5 text-[12.5px] font-bold text-moss cursor-pointer ${enCurso ? "opacity-60" : ""}`}
                   >
                     <Wallet size={13} /> Confirmar pago
                   </button>
@@ -191,14 +188,14 @@ export default function AdminDashboard() {
                     href={linkWa}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none", background: "none", border: `1.5px solid ${palette.line}`, color: palette.ink, fontWeight: 700, fontSize: 12.5, borderRadius: 8, padding: "6px 12px" }}
+                    className="flex items-center gap-1.5 rounded-md2 border-[1.5px] border-line bg-transparent px-3 py-1.5 text-[12.5px] font-bold text-ink no-underline"
                   >
                     <MessageCircle size={13} color="#25D366" /> Recordarle
                   </a>
                   <button
                     onClick={() => cambiarEstado(p.id, "CANCELADO")}
                     disabled={enCurso}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 12.5, borderRadius: 8, padding: "6px 12px", cursor: "pointer", opacity: enCurso ? 0.6 : 1 }}
+                    className={`flex items-center gap-1.5 rounded-md2 border-[1.5px] border-danger bg-transparent px-3 py-1.5 text-[12.5px] font-bold text-danger cursor-pointer ${enCurso ? "opacity-60" : ""}`}
                   >
                     <X size={13} /> Cancelar
                   </button>
@@ -211,34 +208,22 @@ export default function AdminDashboard() {
 
       <Seccion titulo={`Hoy · ${fmtDia(datos.hoy.fecha, { weekday: "long", day: "numeric", month: "long" })}`} abierta={abiertas.hoy} onToggle={() => toggle("hoy")}>
         {datos.hoy.bloqueado ? (
-          <p style={{ fontSize: 13, color: palette.inkSoft, margin: 0 }}>Hoy está bloqueado — no hay clases.</p>
+          <p className="m-0 text-[13px] text-ink-soft">Hoy está bloqueado — no hay clases.</p>
         ) : datos.hoy.horarios.length === 0 ? (
-          <p style={{ fontSize: 13, color: palette.inkSoft, margin: 0 }}>Hoy no hay franja horaria configurada.</p>
+          <p className="m-0 text-[13px] text-ink-soft">Hoy no hay franja horaria configurada.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="flex flex-col gap-2.5">
             {datos.hoy.horarios.map((h) => (
-              <div key={h.hora} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: palette.inkSoft, width: 42, flexShrink: 0 }}>{h.hora}</span>
+              <div key={h.hora} className="flex items-center gap-2.5">
+                <span className="w-[42px] shrink-0 text-[12.5px] font-bold text-ink-soft">{h.hora}</span>
                 {h.cancelado ? (
-                  <span style={{ fontSize: 12.5, color: palette.danger, fontWeight: 600 }}>Cancelado</span>
+                  <span className="text-[12.5px] font-semibold text-danger">Cancelado</span>
                 ) : h.alumnas.length === 0 ? (
-                  <span style={{ fontSize: 12.5, color: palette.inkSoft }}>Sin alumnas anotadas</span>
+                  <span className="text-[12.5px] text-ink-soft">Sin alumnas anotadas</span>
                 ) : (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  <div className="flex flex-wrap gap-1.5">
                     {h.alumnas.map((a) => (
-                      <button
-                        key={a.id}
-                        onClick={() => irAReservasDe(a.id, a.nombreCompleto)}
-                        title={`Ver reservas de ${a.nombreCompleto}`}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600,
-                          color: a.pendiente ? palette.clayDark : palette.ink,
-                          background: a.pendiente ? palette.claySoft : palette.mossSoft,
-                          padding: "4px 9px", borderRadius: 999, border: "none", cursor: "pointer",
-                        }}
-                      >
-                        <User size={11} /> {a.nombre}{a.pendiente ? " · pendiente" : ""}
-                      </button>
+                      <AlumnaChip key={a.id} alumna={a} onClick={() => irAReservasDe(a.id, a.nombreCompleto)} iconSize={11} />
                     ))}
                   </div>
                 )}
@@ -250,26 +235,26 @@ export default function AdminDashboard() {
 
       <Seccion titulo="Horarios libres esta semana" abierta={abiertas.semana} onToggle={() => toggle("semana")}>
         {datos.semana.length === 0 ? (
-          <p style={{ fontSize: 13, color: palette.inkSoft, margin: 0 }}>No hay más días de estudio esta semana.</p>
+          <p className="m-0 text-[13px] text-ink-soft">No hay más días de estudio esta semana.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex flex-col gap-3">
             {datos.semana.map((d) => (
               <div key={d.fecha}>
-                <p style={{ fontSize: 12.5, fontWeight: 700, color: palette.mossDark, margin: "0 0 6px", textTransform: "capitalize" }}>
+                <p className="m-0 mb-1.5 text-[12.5px] font-bold capitalize text-moss-dark">
                   {fmtDia(d.fecha, { weekday: "long", day: "numeric" })}
                 </p>
                 {d.bloqueado ? (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: palette.danger, fontWeight: 600 }}>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
                     <CalendarX size={12} /> Bloqueado
                   </span>
                 ) : d.horariosLibres.length === 0 ? (
-                  <span style={{ fontSize: 12, color: palette.inkSoft }}>Completo</span>
+                  <span className="text-xs text-ink-soft">Completo</span>
                 ) : (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  <div className="flex flex-wrap gap-1.5">
                     {d.horariosLibres.map((h) => (
                       <span
                         key={h.hora}
-                        style={{ fontSize: 12, fontWeight: 600, color: palette.moss, background: palette.mossSoft, padding: "4px 9px", borderRadius: 999 }}
+                        className="rounded-full bg-moss-soft px-2.5 py-1 text-xs font-semibold text-moss"
                       >
                         {h.hora} · {h.quedan} libre{h.quedan === 1 ? "" : "s"}
                       </span>
@@ -283,59 +268,59 @@ export default function AdminDashboard() {
       </Seccion>
 
       <Seccion titulo="Alumnas por mes" abierta={abiertas.alumnosMes} onToggle={() => toggle("alumnosMes")}>
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ flex: 1, textAlign: "center", padding: "14px 8px", borderRadius: 12, background: palette.mossSoft }}>
-            <Users size={16} color={palette.moss} style={{ marginBottom: 4 }} />
-            <p style={{ fontSize: 26, fontWeight: 800, color: palette.mossDark, margin: "2px 0" }}>{datos.alumnosMes.actual}</p>
-            <p style={{ fontSize: 11.5, color: palette.inkSoft, margin: 0, textTransform: "capitalize" }}>{mesActualNombre} (en curso)</p>
+        <div className="flex gap-3">
+          <div className="flex-1 rounded-md2 bg-moss-soft px-2 py-3.5 text-center">
+            <Users size={16} color={palette.moss} className="mb-1 inline-block" />
+            <p className="my-0.5 text-2xl font-extrabold text-moss-dark">{datos.alumnosMes.actual}</p>
+            <p className="m-0 text-[11.5px] capitalize text-ink-soft">{mesActualNombre} (en curso)</p>
           </div>
-          <div style={{ flex: 1, textAlign: "center", padding: "14px 8px", borderRadius: 12, background: palette.bg }}>
-            <Users size={16} color={palette.inkSoft} style={{ marginBottom: 4 }} />
-            <p style={{ fontSize: 26, fontWeight: 800, color: palette.ink, margin: "2px 0" }}>{datos.alumnosMes.pasado}</p>
-            <p style={{ fontSize: 11.5, color: palette.inkSoft, margin: 0, textTransform: "capitalize" }}>{mesPasadoNombre}</p>
+          <div className="flex-1 rounded-md2 bg-bg px-2 py-3.5 text-center">
+            <Users size={16} color={palette.inkSoft} className="mb-1 inline-block" />
+            <p className="my-0.5 text-2xl font-extrabold text-ink">{datos.alumnosMes.pasado}</p>
+            <p className="m-0 text-[11.5px] capitalize text-ink-soft">{mesPasadoNombre}</p>
           </div>
         </div>
-        <p style={{ fontSize: 11.5, color: palette.inkSoft, margin: "10px 0 0" }}>Cuenta alumnas distintas con al menos una clase reservada (no canceladas) en cada mes.</p>
+        <p className="m-0 mt-2.5 text-[11.5px] text-ink-soft">Cuenta alumnas distintas con al menos una clase reservada (no canceladas) en cada mes.</p>
       </Seccion>
 
       <Seccion titulo="Contactar alumno" abierta={abiertas.contacto} onToggle={() => toggle("contacto")}>
-        <div style={{ position: "relative", marginBottom: 10 }}>
-          <Search size={16} color={palette.inkSoft} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+        <div className="relative mb-2.5">
+          <Search size={16} color={palette.inkSoft} className="absolute left-3 top-1/2 -translate-y-1/2" />
           <input
-            style={{ ...inputStyle, paddingLeft: 36 }}
+            className={`${inputStyle} pl-9`}
             placeholder="Buscar por nombre, email o teléfono…"
             value={qContacto}
             onChange={(e) => setQContacto(e.target.value)}
           />
         </div>
         {qContacto.trim().length >= 2 && resultadosContacto.length === 0 && (
-          <p style={{ fontSize: 12.5, color: palette.inkSoft, margin: 0 }}>No encontramos ningún alumno con ese dato.</p>
+          <p className="m-0 text-[12.5px] text-ink-soft">No encontramos ningún alumno con ese dato.</p>
         )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {resultadosContacto.map((a) => {
-            const numeroWa = a.telefono.replace(/[^\d]/g, "");
             return (
-            <div key={a.id} style={{ padding: "10px 12px", borderRadius: 10, background: palette.bg }}>
-              <p style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, margin: "0 0 6px" }}>
+            <div key={a.id} className="rounded-md2 bg-bg px-3 py-2.5">
+              <p className="m-0 mb-1.5 flex items-center gap-1.5 font-semibold">
                 {a.nombre} {a.apellido}
                 <button
                   onClick={() => setPerfilAlumno(a)}
                   title={`Ver perfil de ${a.nombre} ${a.apellido}`}
-                  style={{ display: "flex", alignItems: "center", background: "none", border: "none", cursor: "pointer", color: palette.moss, padding: 0 }}
+                  className="flex items-center border-none bg-transparent p-0 text-moss cursor-pointer"
                 >
                   <UserCircle size={20} />
                 </button>
-              </p>       <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: palette.inkSoft, margin: "0 0 3px" }}>
+              </p>
+              <p className="m-0 mb-1 flex items-center gap-1.5 text-[12.5px] text-ink-soft">
                   <Mail size={12} /> {a.email}
                 </p>
-                <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: palette.inkSoft, margin: "0 0 3px" }}>
+                <p className="m-0 mb-1 flex items-center gap-1.5 text-[12.5px] text-ink-soft">
                   <Phone size={12} /> {a.telefono}
                 </p>
                 <a
-                  href={`https://wa.me/${numeroWa}`}
+                  href={buildWaLink(a.telefono)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", color: `${palette.inkSoft}`, fontSize: 12.5, borderRadius: 8 }}
+                  className="inline-flex items-center gap-1.5 rounded-md2 text-[12.5px] text-ink-soft no-underline"
                 >
                   <WhatsAppIcon size={12} /> Escribirle por WhatsApp
                 </a>
@@ -360,49 +345,49 @@ export default function AdminDashboard() {
       </Seccion>
 
       <Seccion titulo="Importar alumnas" abierta={abiertas.importar} onToggle={() => toggle("importar")}>
-        <p style={{ fontSize: 12.5, color: palette.inkSoft, margin: "0 0 10px" }}>
+        <p className="m-0 mb-2.5 text-[12.5px] text-ink-soft">
           Pegá tu lista, una alumna por línea, así: <strong>Nombre Apellido, Teléfono, Email (opcional)</strong>. El apellido y el email no son obligatorios. Si dos alumnas distintas comparten el mismo teléfono de contacto (ej. dos hermanas), no hay problema. A cada una le queda como contraseña provisoria su propio teléfono — se lo tienen que cambiar antes de poder editar su perfil.
         </p>
-        <textarea
-          value={textoImportar}
-          onChange={(e) => { setTextoImportar(e.target.value); setResultadoImportar(null); }}
-          placeholder={"Andrea Caire, +54 9 3516 763769\nBeatriz, +54 9 3546 457211"}
-          rows={8}
-          style={{ ...inputStyle, height: "auto", resize: "vertical", fontFamily: "monospace", fontSize: 12.5, marginBottom: 10 }}
-        />
-        {alumnasAImportar.length > 0 && (
-          <p style={{ fontSize: 12, color: palette.inkSoft, margin: "0 0 10px" }}>
-            Detecté {alumnasAImportar.length} línea{alumnasAImportar.length === 1 ? "" : "s"}
-            {alumnasSinTelefono.length > 0 && (
-              <> — <span style={{ color: palette.danger, fontWeight: 700 }}>{alumnasSinTelefono.length} sin teléfono, no se van a importar</span>: {alumnasSinTelefono.map((a) => `${a.nombre} ${a.apellido}`.trim()).join(", ")}</>
-            )}
-          </p>
-        )}
-        {errorImportar && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorImportar}</p>}
-        <button
-          onClick={importarAlumnas}
-          disabled={importando || alumnasAImportar.filter((a) => a.telefono).length === 0}
-          style={{
-            display: "flex", alignItems: "center", gap: 6, background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13,
-            border: "none", borderRadius: 8, padding: "9px 16px", cursor: "pointer",
-            opacity: importando || alumnasAImportar.filter((a) => a.telefono).length === 0 ? 0.6 : 1,
-          }}
-        >
-          <UserPlus size={15} /> {importando ? "Importando…" : "Importar alumnas"}
-        </button>
+        <form onSubmit={(e) => { e.preventDefault(); importarAlumnas(); }}>
+          <textarea
+            value={textoImportar}
+            onChange={(e) => { setTextoImportar(e.target.value); setResultadoImportar(null); }}
+            placeholder={"Andrea Caire, +54 9 3516 763769\nBeatriz, +54 9 3546 457211"}
+            rows={8}
+            className={`${inputStyle} mb-2.5 h-auto resize-y font-mono text-[12.5px]`}
+          />
+          {alumnasAImportar.length > 0 && (
+            <p className="m-0 mb-2.5 text-xs text-ink-soft">
+              Detecté {alumnasAImportar.length} línea{alumnasAImportar.length === 1 ? "" : "s"}
+              {alumnasSinTelefono.length > 0 && (
+                <> — <span className="font-bold text-danger">{alumnasSinTelefono.length} sin teléfono, no se van a importar</span>: {alumnasSinTelefono.map((a) => `${a.nombre} ${a.apellido}`.trim()).join(", ")}</>
+              )}
+            </p>
+          )}
+          {errorImportar && <p className="m-0 mb-2.5 text-[12.5px] text-danger">{errorImportar}</p>}
+          <button
+            type="submit"
+            disabled={importando || alumnasAImportar.filter((a) => a.telefono).length === 0}
+            className={`flex items-center gap-1.5 rounded-md2 border-none bg-moss px-4 py-2.5 text-[13px] font-bold text-white cursor-pointer ${
+              importando || alumnasAImportar.filter((a) => a.telefono).length === 0 ? "opacity-60" : "opacity-100"
+            }`}
+          >
+            <UserPlus size={15} /> {importando ? "Importando…" : "Importar alumnas"}
+          </button>
+        </form>
 
         {resultadoImportar && (
-          <div style={{ marginTop: 14, padding: 12, borderRadius: 10, background: palette.mossSoft }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: palette.mossDark, margin: "0 0 6px" }}>
+          <div className="mt-3.5 rounded-md2 bg-moss-soft p-3">
+            <p className="m-0 mb-1.5 text-[13px] font-bold text-moss-dark">
               Se cargaron {resultadoImportar.creadas} alumna{resultadoImportar.creadas === 1 ? "" : "s"}.
             </p>
             {resultadoImportar.duplicadas.length > 0 && (
-              <p style={{ fontSize: 12, color: palette.inkSoft, margin: "0 0 4px" }}>
+              <p className="m-0 mb-1 text-xs text-ink-soft">
                 Ya existían (no se tocaron): {resultadoImportar.duplicadas.join(", ")}
               </p>
             )}
             {resultadoImportar.fallidas.length > 0 && (
-              <p style={{ fontSize: 12, color: palette.danger, margin: 0 }}>
+              <p className="m-0 text-xs text-danger">
                 No se pudieron cargar: {resultadoImportar.fallidas.map((f) => f.fila).join(", ")}
               </p>
             )}
@@ -410,6 +395,5 @@ export default function AdminDashboard() {
         )}
       </Seccion>
     </div>
-    
   );
 }

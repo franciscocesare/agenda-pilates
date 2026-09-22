@@ -1,6 +1,5 @@
 "use client";
 import { ReactNode } from "react";
-import { palette } from "../ui";
 
 export type HorarioDia = {
   hora: string; cancelado: boolean; used: number; total: number;
@@ -16,20 +15,23 @@ export type HorarioDia = {
  */
 export function HorarioRow({ hora, children, subrow }: { hora: string; children: ReactNode; subrow?: ReactNode }) {
   return (
-    <div style={{ borderRadius: 12, background: "#fff", border: `1px solid ${palette.line}`, padding: "10px 12px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <span style={{ fontWeight: 800, fontSize: 15, color: palette.ink }}>{hora} hs</span>
+    <div className="rounded-md2 border border-line bg-white px-3 py-2.5">
+      <div className="flex items-center justify-between gap-2.5">
+        <span className="text-[15px] font-extrabold text-ink">{hora} hs</span>
         {children}
       </div>
-      {subrow && <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${palette.line}` }}>{subrow}</div>}
+      {subrow && <div className="mt-2 border-t border-line pt-2">{subrow}</div>}
     </div>
   );
 }
 
 export function Referencia({ color, label }: { color: string; label: string }) {
+  // `color` llega como un hex dinámico (según el estado del turno), así
+  // que no puede resolverse a una className estática de Tailwind: acá sí
+  // corresponde un estilo inline puntual.
   return (
-    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <span style={{ width: 10, height: 10, borderRadius: 4, background: color, display: "inline-block", flexShrink: 0 }} />
+    <span className="flex items-center gap-1.5">
+      <span className="inline-block h-2.5 w-2.5 shrink-0 rounded" style={{ background: color }} />
       {label}
     </span>
   );

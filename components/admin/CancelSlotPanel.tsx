@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { CalendarOff, RotateCcw } from "lucide-react";
-import { palette, card, btnGhost, btnPrimary, inputStyle, fmtLarga, HORARIOS_BASE } from "../ui";
+import { palette, card, btnPrimary, inputStyle, fmtLarga } from "../ui";
 import { Field } from "../Field";
 import ErrorBanner from "../ErrorBanner";
+import { HoraPicker } from "../DiaHoraPicker";
 
 type Bloqueo = { id: string; fecha: string; hora: string; motivo: string };
 
@@ -51,60 +52,48 @@ export default function CancelSlotPanel() {
   };
 
   return (
-    <div style={{ ...card, marginBottom: 20 }}>
-      <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 6px", color: palette.inkSoft, textTransform: "uppercase", letterSpacing: 0.5 }}>Cancelar un horario puntual</p>
-      <p style={{ fontSize: 13, color: palette.inkSoft, margin: "0 0 14px" }}>
+    <div className={`${card} mb-5`}>
+      <p className="m-0 mb-1.5 text-sm font-bold uppercase tracking-wide text-ink-soft">Cancelar un horario puntual</p>
+      <p className="m-0 mb-3.5 text-[13px] text-ink-soft">
         Para cuando falta gente en un horario específico de un día, sin cerrar el día entero. Las alumnas con turno en ese horario (confirmado o pendiente de pago) se cancelan automáticamente; si ya se les había descontado el crédito, se les devuelve.
       </p>
       <ErrorBanner message={error} />
       {aviso && (
-        <div style={{ background: palette.mossSoft, color: palette.moss, padding: "10px 12px", borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
+        <div className="mb-3.5 rounded-md2 bg-moss-soft px-3 py-2.5 text-[13px] font-semibold text-moss">
           {aviso}
         </div>
       )}
 
-      <Field label="Fecha">
-        <input style={inputStyle} type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-      </Field>
+      <form onSubmit={(e) => { e.preventDefault(); cancelar(); }}>
+        <Field label="Fecha">
+          <input className={inputStyle} type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+        </Field>
 
-      <Field label="Horario">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-          {HORARIOS_BASE.map((h) => (
-            <button
-              key={h}
-              onClick={() => setHora(h)}
-              style={{
-                padding: "9px 4px", borderRadius: 10, textAlign: "center", cursor: "pointer",
-                border: `1.5px solid ${hora === h ? palette.danger : palette.line}`,
-                background: hora === h ? palette.dangerSoft : "#fff", fontWeight: 700, fontSize: 13,
-              }}
-            >
-              {h}
-            </button>
-          ))}
-        </div>
-      </Field>
+        <Field label="Horario">
+          <HoraPicker value={hora} onChange={setHora} activeClasses="border-danger bg-danger-soft" />
+        </Field>
 
-      <Field label="Motivo">
-        <input style={inputStyle} placeholder="Falta de alumnas, imprevisto…" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
-      </Field>
+        <Field label="Motivo">
+          <input className={inputStyle} placeholder="Falta de alumnas, imprevisto…" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+        </Field>
 
-      <button
-        style={{ ...btnPrimary, background: palette.danger, marginBottom: bloqueos.length > 0 ? 18 : 0, opacity: fecha && hora && motivo && !loading ? 1 : 0.6 }}
-        disabled={!fecha || !hora || !motivo || loading}
-        onClick={cancelar}
-      >
-        {loading ? "Cancelando…" : "Cancelar este horario"}
-      </button>
+        <button
+          type="submit"
+          className={`${btnPrimary} !bg-danger ${bloqueos.length > 0 ? "mb-[18px]" : "mb-0"} ${fecha && hora && motivo && !loading ? "opacity-100" : "opacity-60"}`}
+          disabled={!fecha || !hora || !motivo || loading}
+        >
+          {loading ? "Cancelando…" : "Cancelar este horario"}
+        </button>
+      </form>
 
       {bloqueos.map((b) => (
-        <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderTop: `1px solid ${palette.line}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div key={b.id} className="flex items-center justify-between border-t border-line py-2.5">
+          <div className="flex items-center gap-2">
             <CalendarOff size={14} color={palette.danger} />
-            <span style={{ fontSize: 14, fontWeight: 600, textTransform: "capitalize" }}>{fmtLarga(new Date(b.fecha))} · {b.hora} hs</span>
-            <span style={{ fontSize: 13, color: palette.inkSoft }}>— {b.motivo}</span>
+            <span className="text-sm font-semibold capitalize">{fmtLarga(new Date(b.fecha))} · {b.hora} hs</span>
+            <span className="text-[13px] text-ink-soft">— {b.motivo}</span>
           </div>
-          <button onClick={() => reabrir(b.id)} style={{ background: "none", border: "none", cursor: "pointer", color: palette.inkSoft, display: "flex", alignItems: "center", gap: 4 }} title="Reabrir horario">
+          <button onClick={() => reabrir(b.id)} className="flex items-center gap-1 border-none bg-transparent text-ink-soft cursor-pointer" title="Reabrir horario">
             <RotateCcw size={15} />
           </button>
         </div>

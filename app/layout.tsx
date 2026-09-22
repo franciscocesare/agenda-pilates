@@ -2,12 +2,12 @@ import { ReactNode } from "react";
 import Shell from "@/components/Shell";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata = {
-  title: "Monte Pilates — Pilates clásico en Villa Ciudad Parque, Calamuchita",
-  description:
-    "Estudio de Pilates clásico en Villa Ciudad Parque, Valle de Calamuchita, Córdoba. Método original de Joseph Pilates, aparatos originales y grupos reducidos.",
+  title: BRAND.metaTitle,
+  description: BRAND.metaDescription,
 };
 
 // Server component: lee la sesión real de la cookie una sola vez acá

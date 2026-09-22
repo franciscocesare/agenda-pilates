@@ -2,13 +2,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarX, Sparkles } from "lucide-react";
-import { FONT_DISPLAY, palette, btnPrimary, btnSecondary, btnGhost, card, fmtLarga } from "../ui";
-import { WHATSAPP_NUMBER } from "@/lib/constants";
+import { palette, btnPrimary, btnSecondary, btnGhost, card, fmtLarga } from "../ui";
+import { buildWaLink } from "@/lib/whatsapp";
+import type { Credito } from "@/lib/types";
 import ErrorBanner from "../ErrorBanner";
 import { WhatsAppIcon } from "../Icons/WhatsAppIcon";
 
 type Turno = { id: string; fecha: string; hora: string; estado: string; recurringReservationId: string | null };
-type Credito = { id: string; clasesDisponibles: number; esCredito: boolean; vencimiento: string };
 
 export default function MyAppointments() {
   const router = useRouter();
@@ -52,55 +52,55 @@ export default function MyAppointments() {
     cargar();
   };
 
-  if (loading) return <p style={{ color: palette.inkSoft, textAlign: "center", padding: 40 }}>Cargando…</p>;
+  if (loading) return <p className="p-10 text-center text-ink-soft">Cargando…</p>;
 
   if (cancelTarget) {
     return (
-      <div style={{ textAlign: "center", padding: "20px 0" }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: palette.dangerSoft, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
+      <div className="py-5 text-center">
+        <div className="mx-auto mb-[18px] flex h-14 w-14 items-center justify-center rounded-full bg-danger-soft">
           <CalendarX size={26} color={palette.danger} />
         </div>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "0 0 16px", color: palette.moss }}>¿Querés cancelar este turno?</h1>
+        <h1 className="mb-4 font-display text-[22px] font-semibold text-moss">¿Querés cancelar este turno?</h1>
         <ErrorBanner message={error} />
-        <div style={{ ...card, marginBottom: 24, textAlign: "left" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0" }}>
-            <span style={{ color: palette.inkSoft, fontWeight: 600, fontSize: 14 }}>Fecha</span>
-            <span style={{ fontWeight: 700, fontSize: 14, textTransform: "capitalize" }}>{fmtLarga(new Date(cancelTarget.fecha))}</span>
+        <div className={`${card} mb-6 text-left`}>
+          <div className="flex justify-between py-2">
+            <span className="text-sm font-semibold text-ink-soft">Fecha</span>
+            <span className="text-sm font-bold capitalize">{fmtLarga(new Date(cancelTarget.fecha))}</span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0" }}>
-            <span style={{ color: palette.inkSoft, fontWeight: 600, fontSize: 14 }}>Horario</span>
-            <span style={{ fontWeight: 700, fontSize: 14 }}>{cancelTarget.hora} hs</span>
+          <div className="flex justify-between py-2">
+            <span className="text-sm font-semibold text-ink-soft">Horario</span>
+            <span className="text-sm font-bold">{cancelTarget.hora} hs</span>
           </div>
           {cancelTarget.recurringReservationId && (
-            <p style={{ fontSize: 12, color: palette.inkSoft, margin: "10px 0 0" }}>
+            <p className="m-0 mt-2.5 text-xs text-ink-soft">
               Solo se cancela esta clase puntual; tu día fijo sigue reservado el resto del mes.
             </p>
           )}
         </div>
-        <p style={{ fontSize: 13, color: palette.inkSoft, margin: "0 0 20px", lineHeight: 1.5 }}>
+        <p className="m-0 mb-5 text-[13px] leading-relaxed text-ink-soft">
           Si cancelás con más de 3 horas de anticipación, no perdés el crédito de esta clase: queda disponible para que la profesora te asigne otro día.
         </p>
-        <button style={{ ...btnPrimary, background: palette.danger, marginBottom: 12, opacity: cancelando ? 0.7 : 1 }} disabled={cancelando} onClick={confirmarCancelacion}>
+        <button className={`${btnPrimary} mb-3 !bg-danger ${cancelando ? "opacity-70" : ""}`} disabled={cancelando} onClick={confirmarCancelacion}>
           {cancelando ? "Cancelando…" : "Sí, cancelar turno"}
         </button>
-        <button style={btnSecondary} onClick={() => setCancelTarget(null)}>No, mantener turno</button>
+        <button className={btnSecondary} onClick={() => setCancelTarget(null)}>No, mantener turno</button>
       </div>
     );
   }
 
   return (
     <div>
-      <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 600, margin: "8px 0 20px", color: palette.moss }}>Mis clases</h1>
+      <h1 className="mb-5 mt-2 font-display text-2xl font-semibold text-moss">Mis clases</h1>
       {clasesARecuperar > 0 && (
-        <div style={{ ...card, marginBottom: 16, display: "flex", alignItems: "center", gap: 12, background: palette.claySoft, borderColor: palette.clay }}>
-          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div className={`${card} mb-4 flex items-center gap-3 !bg-clay-soft !border-clay`}>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white">
             <Sparkles size={19} color={palette.clayDark} />
           </div>
           <div>
-            <p style={{ fontWeight: 800, fontSize: 15, margin: "0 0 2px", color: palette.clayDark }}>
+            <p className="m-0 mb-0.5 text-[15px] font-extrabold text-clay-dark">
               {clasesARecuperar === 1 ? "Tenés 1 clase a recuperar" : `Tenés ${clasesARecuperar} clases a recuperar`}
             </p>
-            <p style={{ fontSize: 12.5, color: palette.inkSoft, margin: 0 }}>
+            <p className="m-0 text-[12.5px] text-ink-soft">
               Pedile a administración un día por WhatsApp
               {proximoVencimiento ? ` · vence antes el ${fmtLarga(proximoVencimiento)}` : ""}
             </p>
@@ -108,34 +108,36 @@ export default function MyAppointments() {
         </div>
       )}
       {turnos.length === 0 ? (
-        <div style={{ ...card, textAlign: "center", padding: 32 }}>
-          <p style={{ fontWeight: 700, marginBottom: 8 }}>Todavía no tenés ninguna clase asignada.</p>
-          <p style={{ fontSize: 14, color: palette.inkSoft, margin: "0 0 20px" }}>
+        <div className={`${card} p-8 text-center`}>
+          <p className="mb-2 font-bold">Todavía no tenés ninguna clase asignada.</p>
+          <p className="m-0 mb-5 text-sm text-ink-soft">
             Mirá en la Agenda qué días hay lugar y pedile el turno a administración por WhatsApp.
           </p>
-          <button style={{ ...btnPrimary, marginBottom: 12 }} onClick={() => router.push("/agenda")}>Ver la agenda</button>
+          <button className={`${btnPrimary} mb-3`} onClick={() => router.push("/agenda")}>Ver la agenda</button>
           <a
-            href={`https://wa.me/${WHATSAPP_NUMBER}`}
+            href={buildWaLink()}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ ...btnSecondary, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            className={`${btnSecondary} flex items-center justify-center gap-2 no-underline`}
           >
             <WhatsAppIcon size={16} color="#25D366" /> Escribir por WhatsApp
           </a>
         </div>
       ) : (
         turnos.map((t) => (
-          <div key={t.id} style={{ ...card, marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+          <div key={t.id} className={`${card} mb-3.5`}>
+            <div className="mb-3.5 flex items-start justify-between">
               <div>
-                <p style={{ fontWeight: 800, fontSize: 16, margin: "0 0 4px", textTransform: "capitalize" }}>{fmtLarga(new Date(t.fecha))}</p>
-                <p style={{ color: palette.inkSoft, fontWeight: 600, fontSize: 14, margin: 0 }}>{t.hora} hs</p>
+                <p className="m-0 mb-1 text-base font-extrabold capitalize">{fmtLarga(new Date(t.fecha))}</p>
+                <p className="m-0 text-sm font-semibold text-ink-soft">{t.hora} hs</p>
               </div>
-              <span style={{ background: t.recurringReservationId ? palette.claySoft : palette.mossSoft, color: t.recurringReservationId ? palette.clayDark : palette.moss, fontSize: 12, fontWeight: 700, padding: "5px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>
+              <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${
+                t.recurringReservationId ? "bg-clay-soft text-clay-dark" : "bg-moss-soft text-moss"
+              }`}>
                 {t.recurringReservationId ? "Plan mensual" : "Confirmado"}
               </span>
             </div>
-            <button style={{ ...btnGhost, width: "100%", borderColor: palette.danger, color: palette.danger }} onClick={() => setCancelTarget(t)}>Cancelar turno</button>
+            <button className={`${btnGhost} w-full !border-danger !text-danger`} onClick={() => setCancelTarget(t)}>Cancelar turno</button>
           </div>
         ))
       )}

@@ -1,54 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
-import {
-  Search,
-  X,
-  Wallet,
-  Gift,
-  Repeat,
-  Check,
-  Sparkles,
-  UserCircle,
-  Plus,
-} from "lucide-react";
-import {
-  palette,
-  card,
-  btnPrimary,
-  inputStyle,
-  HORARIOS_BASE,
-  DIAS_LARGO,
-} from "../ui";
+import { X, Sparkles } from "lucide-react";
+import { palette, card, btnPrimary, inputStyle } from "../ui";
+import { buildWaLink } from "@/lib/whatsapp";
+import { fetchCreditosDeAlumno } from "@/lib/api/payments";
 import { Field } from "../Field";
 import ErrorBanner from "../ErrorBanner";
 import ProfilePanel from "../ProfilePanel";
-import { WhatsAppIcon } from "../Icons/WhatsAppIcon";
-
-type Usuario = {
-  id: string;
-  nombre: string;
-  apellido: string;
-  email: string;
-  telefono: string;
-};
-type Credito = {
-  id: string;
-  nombre: string;
-  tipo: "SUELTA" | "MENSUAL";
-  planTypeId: string;
-  clasesDisponibles: number;
-  clasesPorSemana: number | null;
-  patrones: { diaSemana: number; hora: string }[];
-  esCredito: boolean;
-  vencimiento: string;
-};
-type PlanCatalogo = {
-  id: string;
-  nombre: string;
-  tipo: "SUELTA" | "MENSUAL";
-  clasesPorSemana: number | null;
-};
-type Modo = "credito" | "mensual" | "cortesia";
+import { HoraPicker } from "../DiaHoraPicker";
+import StudentPicker from "./manual-booking/StudentPicker";
+import ModeSelector from "./manual-booking/ModeSelector";
+import MonthlyDaysPicker from "./manual-booking/MonthlyDaysPicker";
+import ConfirmPlanNuevoDialog from "./manual-booking/ConfirmPlanNuevoDialog";
+import ConfirmPagoMensualDialog from "./manual-booking/ConfirmPagoMensualDialog";
+import ConfirmPagoDialog from "./manual-booking/ConfirmPagoDialog";
+import type { Usuario, Credito, PlanCatalogo, Modo } from "./manual-booking/types";
 
 export default function ManualBookingForm({
   onClose,
@@ -64,8 +30,6 @@ export default function ManualBookingForm({
   horaInicial?: string;
   titulo?: string;
 }) {
-  const [q, setQ] = useState("");
-  const [resultados, setResultados] = useState<Usuario[]>([]);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [verPerfil, setVerPerfil] = useState(false);
   const [creditos, setCreditos] = useState<Credito[]>([]);
@@ -83,10 +47,6 @@ export default function ManualBookingForm({
   const [planTipoId, setPlanTipoId] = useState("");
   const [confirmandoPlanNuevo, setConfirmandoPlanNuevo] = useState(false);
   const [confirmandoPagoMensual, setConfirmandoPagoMensual] = useState(false);
-  const [creandoAlumna, setCreandoAlumna] = useState(false);
-  const [nuevaAlumna, setNuevaAlumna] = useState({ nombre: "", apellido: "", telefono: "", email: "" });
-  const [guardandoAlumna, setGuardandoAlumna] = useState(false);
-  const [errorAlumna, setErrorAlumna] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/plans")
@@ -94,62 +54,13 @@ export default function ManualBookingForm({
       .then(setPlanes);
   }, []);
 
-  const abrirNuevaAlumna = () => {
-    const partes = q.trim().split(/\s+/);
-    setNuevaAlumna({ nombre: partes[0] ?? "", apellido: partes.slice(1).join(" "), telefono: "", email: "" });
-    setErrorAlumna(null);
-    setCreandoAlumna(true);
-  };
-
-  const crearAlumna = async () => {
-    setGuardandoAlumna(true);
-    setErrorAlumna(null);
-    const res = await fetch("/api/admin/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(nuevaAlumna),
-    });
-    const data = await res.json();
-    setGuardandoAlumna(false);
-    if (!res.ok) { setErrorAlumna(data.error); return; }
-    if (!data.telefonoValido) {
-      window.alert(`Ojo: el teléfono "${data.telefono}" no parece un celular argentino completo — revisalo, puede que el link de WhatsApp no funcione bien.`);
-    }
-    if (data.posibleDuplicado) {
-      // No se bloqueó la carga (el mismo teléfono puede ser legítimo
-      // entre distintas personas de una familia), pero acá coincide
-      // también nombre y apellido: probablemente sea la misma alumna
-      // cargada dos veces por error.
-      window.alert(`Ojo: ya había otra ficha con el mismo nombre y teléfono (${nuevaAlumna.nombre} ${nuevaAlumna.apellido}). Se creó igual, pero convendría revisar si no quedó duplicada.`);
-    }
-    setCreandoAlumna(false);
-    setQ("");
-    setResultados([]);
-    setUsuario(data);
-  };
-
-  useEffect(() => {
-    if (q.trim().length < 2) {
-      setResultados([]);
-      return;
-    }
-    const t = setTimeout(() => {
-      fetch(`/api/admin/users?q=${encodeURIComponent(q)}`)
-        .then((r) => r.json())
-        .then(setResultados);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [q]);
-
   useEffect(() => {
     if (!usuario) {
       setCreditos([]);
       setPlanTipoId("");
       return;
     }
-    fetch(`/api/admin/payments?userId=${usuario.id}`)
-      .then((r) => r.json())
-      .then((data: Credito[]) => {
+    fetchCreditosDeAlumno(usuario.id).then((data: Credito[]) => {
         setCreditos(data);
         const conCredito = data.find(
           (c) => c.tipo === "SUELTA" && c.clasesDisponibles > 0,
@@ -388,10 +299,7 @@ export default function ManualBookingForm({
       month: "long",
     });
     const texto = `¡Hola ${usuario.nombre}! Te estoy apartando la clase del ${fechaFmt} a las ${hora} hs. Cuando puedas pasame el pago de la clase suelta para confirmarla 🌿`;
-    window.open(
-      `https://wa.me/${usuario.telefono.replace(/[^\d]/g, "")}?text=${encodeURIComponent(texto)}`,
-      "_blank",
-    );
+    window.open(buildWaLink(usuario.telefono, texto), "_blank");
     // No confirmamos el pago: el lugar queda apartado como "pendiente
     // de pago" y el crédito recién se descuenta cuando el admin
     // confirme el cobro desde el panel de Reservas.
@@ -404,25 +312,10 @@ export default function ManualBookingForm({
       (modo === "mensual" && !!planTipoId && todosLosDiasCompletos));
 
   return (
-    <div style={{ ...card, marginBottom: 16, position: "relative" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 14,
-        }}
-      >
-        <p style={{ fontWeight: 800, margin: 0 }}>{titulo}</p>
-        <button
-          onClick={onClose}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: palette.inkSoft,
-          }}
-        >
+    <div className={`${card} relative mb-4`}>
+      <div className="mb-3.5 flex items-center justify-between">
+        <p className="m-0 font-extrabold">{titulo}</p>
+        <button onClick={onClose} className="border-none bg-transparent text-ink-soft cursor-pointer">
           <X size={18} />
         </button>
       </div>
@@ -430,447 +323,84 @@ export default function ManualBookingForm({
       <ErrorBanner message={error} />
 
       <Field label="Alumno">
-        {usuario ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "10px 12px",
-              borderRadius: 10,
-              background: palette.mossSoft,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>
-                {usuario.nombre} {usuario.apellido}
-              </span>
-              <button
-                onClick={() => setVerPerfil(true)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: palette.moss,
-                  display: "flex",
-                  alignItems: "center",
-                }}
-                title="Ver perfil / escribirle por WhatsApp"
-              >
-                <UserCircle size={20} />
-              </button>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button
-                onClick={() => {
-                  setUsuario(null);
-                  setPlanTipoId("");
-                }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: palette.moss,
-                  fontSize: 13,
-                  fontWeight: 700,
-                }}
-              >
-                Cambiar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <div style={{ position: "relative" }}>
-              <Search
-                size={16}
-                color={palette.inkSoft}
-                style={{ position: "absolute", left: 12, top: 13 }}
-              />
-              <input
-                style={{ ...inputStyle, paddingLeft: 36 }}
-                placeholder="Buscar por nombre, email o teléfono"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
-            </div>
-            {resultados.length > 0 && (
-              <div
-                style={{
-                  marginTop: 8,
-                  border: `1px solid ${palette.line}`,
-                  borderRadius: 10,
-                  overflow: "hidden",
-                }}
-              >
-                {resultados.map((u) => (
-                  <button
-                    key={u.id}
-                    onClick={() => {
-                      setUsuario(u);
-                      setResultados([]);
-                      setQ("");
-                    }}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "10px 12px",
-                      background: "#fff",
-                      border: "none",
-                      borderBottom: `1px solid ${palette.line}`,
-                      cursor: "pointer",
-                      fontSize: 14,
-                    }}
-                  >
-                    <strong>
-                      {u.nombre} {u.apellido}
-                    </strong>{" "}
-                    — {u.email}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {!creandoAlumna ? (
-              q.trim().length >= 2 && (
-                <button
-                  onClick={abrirNuevaAlumna}
-                  style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.moss, fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: "10px 0 0" }}
-                >
-                  <Plus size={14} /> Cargar "{q}" como alumna nueva
-                </button>
-              )
-            ) : (
-              <div style={{ marginTop: 10, padding: 12, borderRadius: 10, background: palette.mossSoft }}>
-                <p style={{ fontSize: 12, fontWeight: 800, color: palette.mossDark, margin: "0 0 10px", textTransform: "uppercase", letterSpacing: 0.4 }}>Alumna nueva</p>
-                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                  <input style={inputStyle} value={nuevaAlumna.nombre} onChange={(e) => setNuevaAlumna({ ...nuevaAlumna, nombre: e.target.value })} placeholder="Nombre" />
-                  <input style={inputStyle} value={nuevaAlumna.apellido} onChange={(e) => setNuevaAlumna({ ...nuevaAlumna, apellido: e.target.value })} placeholder="Apellido" />
-                </div>
-                <input style={{ ...inputStyle, marginBottom: 8 }} value={nuevaAlumna.telefono} onChange={(e) => setNuevaAlumna({ ...nuevaAlumna, telefono: e.target.value })} placeholder="Teléfono" />
-                <input style={{ ...inputStyle, marginBottom: 10 }} value={nuevaAlumna.email} onChange={(e) => setNuevaAlumna({ ...nuevaAlumna, email: e.target.value })} placeholder="Email (opcional)" />
-                {errorAlumna && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorAlumna}</p>}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={crearAlumna}
-                    disabled={!nuevaAlumna.nombre || !nuevaAlumna.telefono || guardandoAlumna}
-                    style={{ flex: 1, background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13, border: "none", borderRadius: 8, padding: "9px 0", cursor: "pointer", opacity: !nuevaAlumna.nombre || !nuevaAlumna.telefono || guardandoAlumna ? 0.6 : 1 }}
-                  >
-                    {guardandoAlumna ? "Guardando…" : "Crear ficha"}
-                  </button>
-                  <button
-                    onClick={() => setCreandoAlumna(false)}
-                    disabled={guardandoAlumna}
-                    style={{ background: "none", border: "none", color: palette.inkSoft, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-                <p style={{ fontSize: 11, color: palette.inkSoft, margin: "8px 0 0" }}>Queda lista para asignarle turnos ya mismo. Su contraseña inicial son los números de su teléfono (ella la puede cambiar después).</p>
-              </div>
-            )}
-          </div>
-        )}
+        <StudentPicker
+          usuario={usuario}
+          onSelect={setUsuario}
+          onClear={() => { setUsuario(null); setPlanTipoId(""); }}
+          onVerPerfil={() => setVerPerfil(true)}
+        />
       </Field>
 
-      {usuario && totalCreditosPorCancelacion > 0 && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "10px 12px",
-            borderRadius: 10,
-            background: palette.claySoft,
-            marginBottom: 14,
-          }}
+      <form onSubmit={(e) => { e.preventDefault(); intentarAsignar(); }}>
+        {usuario && totalCreditosPorCancelacion > 0 && (
+          <div className="mb-3.5 flex items-center gap-2.5 rounded-md2 bg-clay-soft px-3 py-2.5">
+            <Sparkles size={16} color={palette.clayDark} className="shrink-0" />
+            <p className="m-0 text-[12.5px] font-semibold text-clay-dark">
+              {usuario.nombre} tiene{" "}
+              {totalCreditosPorCancelacion === 1
+                ? "1 crédito disponible"
+                : `${totalCreditosPorCancelacion} créditos disponibles`}{" "}
+              por cancelación
+              {vencimientoMasProximo
+                ? ` (vence antes el ${vencimientoMasProximo.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "UTC" })})`
+                : ""}
+              . No hace falta cobrarle esta clase.
+            </p>
+          </div>
+        )}
+
+        {usuario && (
+          <ModeSelector
+            modo={modo}
+            onChange={setModo}
+            totalCreditosPorCancelacion={totalCreditosPorCancelacion}
+            tieneClaseSueltaDisponible={creditos.some((c) => c.tipo === "SUELTA" && c.clasesDisponibles > 0)}
+          />
+        )}
+
+        {usuario && modo === "mensual" && (
+          <MonthlyDaysPicker
+            planes={planes}
+            planTipoId={planTipoId}
+            onPlanTipoIdChange={setPlanTipoId}
+            vendiendo={vendiendo}
+            mismoTipoExistente={mismoTipoExistente}
+            diasFaltantes={diasFaltantes}
+            diasSeleccionados={diasSeleccionados}
+            onActualizarSlot={actualizarSlot}
+            todosLosDiasCompletos={todosLosDiasCompletos}
+          />
+        )}
+
+        {usuario && modo !== "mensual" && (
+          <Field label="Fecha">
+            <input
+              className={inputStyle}
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+            />
+          </Field>
+        )}
+
+        {usuario && modo !== "mensual" && (
+          <Field label="Horario">
+            <HoraPicker value={hora} onChange={setHora} activeClasses="border-moss bg-moss-soft" />
+          </Field>
+        )}
+
+        <button
+          type="submit"
+          className={`${btnPrimary} ${puedeCrear && !loading && !vendiendo ? "opacity-100" : "opacity-60"}`}
+          disabled={!puedeCrear || loading || vendiendo}
         >
-          <Sparkles
-            size={16}
-            color={palette.clayDark}
-            style={{ flexShrink: 0 }}
-          />
-          <p
-            style={{
-              fontSize: 12.5,
-              color: palette.clayDark,
-              margin: 0,
-              fontWeight: 600,
-            }}
-          >
-            {usuario.nombre} tiene{" "}
-            {totalCreditosPorCancelacion === 1
-              ? "1 crédito disponible"
-              : `${totalCreditosPorCancelacion} créditos disponibles`}{" "}
-            por cancelación
-            {vencimientoMasProximo
-              ? ` (vence antes el ${vencimientoMasProximo.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "UTC" })})`
-              : ""}
-            . No hace falta cobrarle esta clase.
-          </p>
-        </div>
-      )}
-
-      {usuario && (
-        <Field label="¿De dónde sale la clase?">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              gap: 8,
-            }}
-          >
-            <ModoBtn
-              active={modo === "credito"}
-              onClick={() => setModo("credito")}
-              icon={Wallet}
-              label={
-                totalCreditosPorCancelacion > 0
-                  ? "Usar crédito"
-                  : "Clase suelta"
-              }
-            />
-            <ModoBtn
-              active={modo === "mensual"}
-              onClick={() => setModo("mensual")}
-              icon={Repeat}
-              label="Día fijo mensual"
-            />
-            <ModoBtn
-              active={modo === "cortesia"}
-              onClick={() => setModo("cortesia")}
-              icon={Gift}
-              label="Cortesía"
-            />
-          </div>
-          {modo === "credito" && (
-            <p
-              style={{
-                fontSize: 12,
-                color: palette.inkSoft,
-                margin: "10px 0 0",
-              }}
-            >
-              {totalCreditosPorCancelacion > 0
-                ? "Descuenta 1 de sus créditos por cancelación disponibles. No se genera ningún pago nuevo."
-                : creditos.some(
-                      (c) => c.tipo === "SUELTA" && c.clasesDisponibles > 0,
-                    )
-                  ? "Descuenta 1 clase de su bono disponible. Te vamos a pedir confirmar el pago antes de guardar."
-                  : "Este alumno no tiene clases sueltas cargadas todavía: al confirmar el pago, se le crea la clase suelta en el momento (no hace falta que compre un plan antes)."}
-            </p>
-          )}
-          {modo === "cortesia" && (
-            <p
-              style={{
-                fontSize: 12,
-                color: palette.inkSoft,
-                margin: "10px 0 0",
-              }}
-            >
-              No descuenta ningún crédito (clase de prueba, reposición, etc.).
-            </p>
-          )}
-        </Field>
-      )}
-
-      {usuario && modo === "mensual" && (
-        <Field label="Plan mensual">
-          <select
-            style={inputStyle}
-            value={planTipoId}
-            disabled={vendiendo}
-            onChange={(e) => setPlanTipoId(e.target.value)}
-          >
-            <option value="">Elegí cuántas veces por semana…</option>
-            {planes
-              .filter((p) => p.tipo === "MENSUAL")
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre}
-                </option>
-              ))}
-          </select>
-        </Field>
-      )}
-
-      {usuario && modo === "mensual" && planTipoId && diasFaltantes > 0 && (
-        <div style={{ marginBottom: 4 }}>
-          {hayLugarEnMismoTipo &&
-            mismoTipoExistente &&
-            mismoTipoExistente.patrones.length > 0 && (
-              <p
-                style={{
-                  fontSize: 12.5,
-                  color: palette.mossDark,
-                  background: palette.mossSoft,
-                  borderRadius: 10,
-                  padding: "10px 12px",
-                  margin: "0 0 10px",
-                }}
-              >
-                Ya tiene fijado:{" "}
-                <strong>
-                  {mismoTipoExistente.patrones
-                    .map((p) => `${DIAS_LARGO[p.diaSemana]} ${p.hora}`)
-                    .join(", ")}
-                </strong>
-                . Completá{" "}
-                {diasFaltantes === 1
-                  ? "el día que falta"
-                  : `los ${diasFaltantes} días que faltan`}
-                :
-              </p>
-            )}
-          {diasSeleccionados.map((slot, idx) => (
-            <div
-              key={idx}
-              style={{
-                padding: 12,
-                borderRadius: 10,
-                background: palette.mossSoft,
-                marginBottom: 10,
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: palette.mossDark,
-                  margin: "0 0 10px",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.4,
-                }}
-              >
-                Día {idx + 1} de {diasFaltantes}
-              </p>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 8,
-                  marginBottom: 10,
-                }}
-              >
-                {[1, 2, 3, 4, 5, 6].map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => actualizarSlot(idx, { diaSemana: d })}
-                    style={{
-                      padding: "9px 4px",
-                      borderRadius: 10,
-                      textAlign: "center",
-                      cursor: "pointer",
-                      border: `1.5px solid ${slot.diaSemana === d ? palette.moss : palette.line}`,
-                      background: slot.diaSemana === d ? "#fff" : "transparent",
-                      fontWeight: 700,
-                      fontSize: 13,
-                    }}
-                  >
-                    {DIAS_LARGO[d]}
-                  </button>
-                ))}
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: 8,
-                }}
-              >
-                {HORARIOS_BASE.map((h) => (
-                  <button
-                    key={h}
-                    onClick={() => actualizarSlot(idx, { hora: h })}
-                    style={{
-                      padding: "9px 4px",
-                      borderRadius: 10,
-                      textAlign: "center",
-                      cursor: "pointer",
-                      border: `1.5px solid ${slot.hora === h ? palette.moss : palette.line}`,
-                      background: slot.hora === h ? "#fff" : "transparent",
-                      fontWeight: 700,
-                      fontSize: 13,
-                    }}
-                  >
-                    {h}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-          {!todosLosDiasCompletos && (
-            <p
-              style={{
-                fontSize: 12,
-                color: palette.inkSoft,
-                margin: "0 0 10px",
-              }}
-            >
-              Elegí día y horario en cada uno de los {diasFaltantes} bloques
-              para poder guardar.
-            </p>
-          )}
-        </div>
-      )}
-
-      {usuario && modo !== "mensual" && (
-        <Field label="Fecha">
-          <input
-            style={inputStyle}
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-          />
-        </Field>
-      )}
-
-      {usuario && modo !== "mensual" && (
-        <Field label="Horario">
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 8,
-            }}
-          >
-            {HORARIOS_BASE.map((h) => (
-              <button
-                key={h}
-                onClick={() => setHora(h)}
-                style={{
-                  padding: "9px 4px",
-                  borderRadius: 10,
-                  textAlign: "center",
-                  cursor: "pointer",
-                  border: `1.5px solid ${hora === h ? palette.moss : palette.line}`,
-                  background: hora === h ? palette.mossSoft : "#fff",
-                  fontWeight: 700,
-                  fontSize: 13,
-                }}
-              >
-                {h}
-              </button>
-            ))}
-          </div>
-        </Field>
-      )}
-
-      <button
-        style={{
-          ...btnPrimary,
-          opacity: puedeCrear && !loading && !vendiendo ? 1 : 0.6,
-        }}
-        disabled={!puedeCrear || loading || vendiendo}
-        onClick={intentarAsignar}
-      >
-        {vendiendo
-          ? "Vendiendo el plan…"
-          : loading
-            ? "Asignando…"
-            : "Asignar turno"}
-      </button>
+          {vendiendo
+            ? "Vendiendo el plan…"
+            : loading
+              ? "Asignando…"
+              : "Asignar turno"}
+        </button>
+      </form>
 
       {verPerfil && usuario && (
         <ProfilePanel
@@ -889,15 +419,11 @@ export default function ManualBookingForm({
           }
           onClasesCanceladas={() => {
             setVerPerfil(false);
-            fetch(`/api/admin/payments?userId=${usuario.id}`)
-              .then((r) => r.json())
-              .then(setCreditos);
+            fetchCreditosDeAlumno(usuario.id).then(setCreditos);
             onCreated();
           }}
           onDiasModificados={() => {
-            fetch(`/api/admin/payments?userId=${usuario.id}`)
-              .then((r) => r.json())
-              .then(setCreditos);
+            fetchCreditosDeAlumno(usuario.id).then(setCreditos);
           }}
           onActualizado={(datos) =>
             setUsuario((prev) => (prev ? { ...prev, ...datos } : prev))
@@ -907,313 +433,39 @@ export default function ManualBookingForm({
       )}
 
       {confirmandoPlanNuevo && usuario && (
-        <div
-          role="dialog"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(60,42,32,0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-            padding: 20,
-          }}
-          onClick={() => setConfirmandoPlanNuevo(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: palette.card,
-              borderRadius: 20,
-              padding: 24,
-              width: "100%",
-              maxWidth: 380,
-            }}
-          >
-            <p
-              style={{
-                fontWeight: 800,
-                fontSize: 17,
-                margin: "0 0 8px",
-                color: palette.mossDark,
-              }}
-            >
-              Este alumno ya tiene un plan mensual
-            </p>
-            <p
-              style={{
-                fontSize: 14,
-                color: palette.inkSoft,
-                margin: "0 0 22px",
-                lineHeight: 1.5,
-              }}
-            >
-              <strong>
-                {usuario.nombre} {usuario.apellido}
-              </strong>{" "}
-              ya tiene cargado <strong>{otroMensualExistente?.nombre}</strong> (
-              {otroMensualExistente?.patrones.length}/
-              {otroMensualExistente?.clasesPorSemana} días fijados). ¿Querés
-              venderle además el plan <strong>{planElegidoNombre}</strong> y
-              agregarle este día igual?
-            </p>
-            <button
-              onClick={() => resolverYAsignarMensual(true)}
-              disabled={vendiendo || loading}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                width: "100%",
-                background: palette.moss,
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 14,
-                border: "none",
-                padding: "13px 16px",
-                borderRadius: 12,
-                cursor: "pointer",
-                marginBottom: 10,
-                opacity: vendiendo || loading ? 0.7 : 1,
-              }}
-            >
-              {vendiendo || loading ? "Guardando…" : "Sí, agregar igual"}
-            </button>
-            <button
-              onClick={() => setConfirmandoPlanNuevo(false)}
-              style={{
-                width: "100%",
-                background: "none",
-                border: "none",
-                color: palette.inkSoft,
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                padding: "6px 0",
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
+        <ConfirmPlanNuevoDialog
+          usuario={usuario}
+          otroMensualExistente={otroMensualExistente}
+          planElegidoNombre={planElegidoNombre}
+          vendiendo={vendiendo}
+          loading={loading}
+          onConfirm={() => resolverYAsignarMensual(true)}
+          onClose={() => setConfirmandoPlanNuevo(false)}
+        />
       )}
 
       {confirmandoPagoMensual && usuario && (
-        <div
-          role="dialog"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(60,42,32,0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-            padding: 20,
-          }}
-          onClick={() => !vendiendo && setConfirmandoPagoMensual(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: palette.card,
-              borderRadius: 20,
-              padding: 24,
-              width: "100%",
-              maxWidth: 380,
-            }}
-          >
-            <p style={{ fontWeight: 800, fontSize: 17, margin: "0 0 8px", color: palette.mossDark }}>
-              ¿Ya está pago el plan mensual?
-            </p>
-            <p style={{ fontSize: 14, color: palette.inkSoft, margin: "0 0 22px", lineHeight: 1.5 }}>
-              Vas a venderle <strong>{planElegidoNombre}</strong> a{" "}
-              <strong>{usuario.nombre} {usuario.apellido}</strong> y fijarle los días elegidos. Confirmá que ya recibiste el pago — todavía no se creó nada.
-            </p>
-            {error && <p style={{ fontSize: 13, color: palette.danger, margin: "0 0 14px" }}>{error}</p>}
-            <button
-              onClick={venderYAsignarMensualConfirmado}
-              disabled={vendiendo}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-                background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 14, border: "none",
-                padding: "13px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10, opacity: vendiendo ? 0.7 : 1,
-              }}
-            >
-              {vendiendo ? "Guardando…" : "Sí, ya está pago"}
-            </button>
-            <button
-              onClick={() => setConfirmandoPagoMensual(false)}
-              disabled={vendiendo}
-              style={{ width: "100%", background: "none", border: "none", color: palette.inkSoft, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0" }}
-            >
-              Todavía no, avisarle primero
-            </button>
-          </div>
-        </div>
+        <ConfirmPagoMensualDialog
+          usuario={usuario}
+          planElegidoNombre={planElegidoNombre}
+          vendiendo={vendiendo}
+          error={error}
+          onConfirm={venderYAsignarMensualConfirmado}
+          onClose={() => setConfirmandoPagoMensual(false)}
+        />
       )}
 
       {confirmandoPago && usuario && (
-        <div
-          role="dialog"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(60,42,32,0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-            padding: 20,
-          }}
-          onClick={() => setConfirmandoPago(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: palette.card,
-              borderRadius: 20,
-              padding: 24,
-              width: "100%",
-              maxWidth: 380,
-            }}
-          >
-            <p
-              style={{
-                fontWeight: 800,
-                fontSize: 17,
-                margin: "0 0 8px",
-                color: palette.mossDark,
-              }}
-            >
-              ¿Ya está pago?
-            </p>
-            <p
-              style={{
-                fontSize: 14,
-                color: palette.inkSoft,
-                margin: "0 0 22px",
-                lineHeight: 1.5,
-              }}
-            >
-              Le vas a apartar a{" "}
-              <strong>
-                {usuario.nombre} {usuario.apellido}
-              </strong>{" "}
-              el lugar del{" "}
-              {fecha &&
-                new Date(fecha + "T00:00:00").toLocaleDateString("es-AR", {
-                  day: "numeric",
-                  month: "long",
-                })}{" "}
-              a las {hora} hs. Si ya pagó, se le descuenta 1 crédito ahora. Si
-              todavía no, el lugar queda apartado y el crédito recién se
-              descuenta cuando confirmes el cobro.
-            </p>
-
-            <button
-              onClick={() => crear(true)}
-              disabled={loading}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                width: "100%",
-                background: palette.moss,
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 14,
-                border: "none",
-                padding: "13px 16px",
-                borderRadius: 12,
-                cursor: "pointer",
-                marginBottom: 10,
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              <Check size={17} /> {loading ? "Guardando…" : "Sí, está pago"}
-            </button>
-
-            <button
-              onClick={avisarPorWhatsapp}
-              disabled={loading}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                width: "100%",
-                background: "#25D366",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 14,
-                border: "none",
-                padding: "13px 16px",
-                borderRadius: 12,
-                cursor: "pointer",
-                marginBottom: 10,
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              <WhatsAppIcon size={16} /> Avisarle y apartar el lugar
-            </button>
-
-            <button
-              onClick={() => setConfirmandoPago(false)}
-              style={{
-                width: "100%",
-                background: "none",
-                border: "none",
-                color: palette.inkSoft,
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                padding: "6px 0",
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
+        <ConfirmPagoDialog
+          usuario={usuario}
+          fecha={fecha}
+          hora={hora}
+          loading={loading}
+          onConfirmarPago={() => crear(true)}
+          onAvisarPorWhatsapp={avisarPorWhatsapp}
+          onClose={() => setConfirmandoPago(false)}
+        />
       )}
     </div>
-  );
-}
-
-function ModoBtn({
-  active,
-  onClick,
-  icon: Icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: typeof Wallet;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 6,
-        padding: "10px 4px",
-        borderRadius: 10,
-        cursor: "pointer",
-        border: `1.5px solid ${active ? palette.moss : palette.line}`,
-        background: active ? palette.mossSoft : "#fff",
-        fontWeight: 700,
-        fontSize: 12,
-        color: active ? palette.moss : palette.inkSoft,
-      }}
-    >
-      <Icon size={16} />
-      {label}
-    </button>
   );
 }

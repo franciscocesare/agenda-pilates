@@ -2,9 +2,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, LogOut, Mail, Phone, User, CalendarX, Pencil, CalendarDays, KeyRound, UserCircleIcon } from "lucide-react";
-import { FONT_DISPLAY, palette, inputStyle, DIAS_LARGO, HORARIOS_BASE } from "./ui";
+import { palette, inputStyle, DIAS_LARGO } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
+import { buildWaLink } from "@/lib/whatsapp";
 import { WhatsAppIcon } from "./Icons/WhatsAppIcon";
+import ConfirmDialog from "./ConfirmDialog";
+import { DiaHoraPicker } from "./DiaHoraPicker";
 
 type Sesion = { id?: string; nombre: string; apellido: string; rol?: "CLIENTE" | "ADMIN"; email?: string | null; telefono?: string | null; passwordProvisoria?: boolean };
 type PlanMensualInfo = {
@@ -13,6 +16,10 @@ type PlanMensualInfo = {
   clasesPorSemana: number;
   patrones: { diaSemana: number; hora: string }[];
 };
+
+// Botón de texto discreto, subrayado, usado varias veces en este panel
+// (cambiar contraseña, editar datos).
+const linkBtnClass = "mb-2.5 mt-2.5 flex w-full items-center justify-start gap-2 border-none bg-transparent p-0 pb-2.5 text-[13px] font-semibold text-ink-soft underline cursor-pointer";
 
 export default function ProfilePanel({
   sesion, onClose, contactoNumero, mostrarLogout = true, planMensual, onClasesCanceladas, onDiasModificados, onActualizado,
@@ -111,7 +118,6 @@ export default function ProfilePanel({
     setGuardando(true);
     setErrorEdicion(null);
     const res = await fetch(`/api/admin/users/${datos.id}`, {
-      // const res = await fetch(`/api/users/${datos.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -155,78 +161,76 @@ export default function ProfilePanel({
   return (
     <div
       role="dialog"
-      style={{ position: "fixed", inset: 0, background: "rgba(60,42,32,0.4)", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", zIndex: 50 }}
+      className="fixed inset-0 z-50 flex items-start justify-end bg-[rgba(60,42,32,0.4)]"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: palette.card, borderRadius: "0 0 20px 20px", padding: 22, width: "100%", maxHeight: "100dvh", overflowY: "auto", boxShadow: "-8px 0 30px rgba(0,0,0,0.12)" }}
+        className="max-h-[100dvh] w-full overflow-y-auto rounded-b-[20px] bg-card p-[22px] shadow-[-8px_0_30px_rgba(0,0,0,0.12)]"
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 42, height: 42, borderRadius: "50%", background: palette.mossSoft, display: "flex", alignItems: "center", justifyContent: "center", color: palette.moss, fontWeight: 800, fontSize: 17 }}>
+        <div className="mb-[18px] flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-moss-soft text-[17px] font-extrabold text-moss">
               <UserCircleIcon size={38} strokeWidth={1.5} />
             </div>
             <div>
-              <p style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 20, margin: 0, color: palette.mossDark }}>{datos.nombre} {datos.apellido}</p>
+              <p className="m-0 font-display text-xl font-semibold text-moss-dark">{datos.nombre} {datos.apellido}</p>
               {datos.rol && (
-                <p style={{ fontSize: 12, fontWeight: 700, color: palette.moss, margin: "2px 0 0", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                <p className="m-0 mt-0.5 text-xs font-bold uppercase tracking-wide text-moss">
                   {datos.rol === "ADMIN" ? "Administración" : ""}
                 </p>
               )}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: palette.inkSoft }}><X size={20} /></button>
+          <button onClick={onClose} className="border-none bg-transparent text-ink-soft cursor-pointer"><X size={20} /></button>
         </div>
 
-        <div style={{ display: editando ? "block" : "none", marginBottom: 20 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <input name="nombre" id="perfil-nombre" autoComplete="given-name" style={inputStyle} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre" />
-            <input name="apellido" id="perfil-apellido" autoComplete="family-name" style={inputStyle} value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} placeholder="Apellido" />
+        <form
+          className={`mb-5 ${editando ? "block" : "hidden"}`}
+          onSubmit={(e) => { e.preventDefault(); guardarEdicion(); }}
+        >
+          <div className="mb-2 flex gap-2">
+            <input name="nombre" id="perfil-nombre" autoComplete="given-name" className={inputStyle} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre" />
+            <input name="apellido" id="perfil-apellido" autoComplete="family-name" className={inputStyle} value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} placeholder="Apellido" />
           </div>
-          <input name="email" id="perfil-email" autoComplete="email" style={{ ...inputStyle, marginBottom: 8 }} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
-          <input name="telefono" id="perfil-telefono" autoComplete="tel" style={{ ...inputStyle, marginBottom: 10 }} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
-          <button
-            onClick={() => { onClose(); router.push("/cambiar-password"); }}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "left", gap: 8, width: "100%",
-              background: "none", border: "none", color: palette.inkSoft, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: "0 0 10px", margin: "10px 0", textDecoration: "underline",
-            }}
-          >
+          <input name="email" id="perfil-email" autoComplete="email" className={`${inputStyle} mb-2`} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" />
+          <input name="telefono" id="perfil-telefono" autoComplete="tel" className={`${inputStyle} mb-2.5`} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Teléfono" />
+          <button type="button" onClick={() => { onClose(); router.push("/cambiar-password"); }} className={linkBtnClass}>
             Cambiar contraseña
           </button>
-          {errorEdicion && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorEdicion}</p>}
-          <div style={{ display: "flex", gap: 8 }}>
+          {errorEdicion && <p className="mb-2.5 text-[12.5px] text-danger">{errorEdicion}</p>}
+          <div className="flex gap-2">
             <button
-              onClick={guardarEdicion}
+              type="submit"
               disabled={guardando}
-              style={{ flex: 1, background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13.5, border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", opacity: guardando ? 0.7 : 1 }}
+              className={`flex-1 rounded-md2 border-none bg-moss py-2.5 text-[13.5px] font-bold text-white cursor-pointer ${guardando ? "opacity-70" : ""}`}
             >
               {guardando ? "Guardando…" : "Guardar cambios"}
             </button>
             <button
+              type="button"
               onClick={() => { setEditando(false); setErrorEdicion(null); setForm({ nombre: datos.nombre, apellido: datos.apellido, email: datos.email ?? "", telefono: datos.telefono ?? "" }); }}
               disabled={guardando}
-              style={{ background: "none", border: `1.5px solid ${palette.line}`, color: palette.inkSoft, fontWeight: 700, fontSize: 13.5, borderRadius: 10, padding: "10px 16px", cursor: "pointer" }}
+              className="rounded-md2 border-[1.5px] border-line bg-transparent px-4 py-2.5 text-[13.5px] font-bold text-ink-soft cursor-pointer"
             >
               Cancelar
             </button>
           </div>
-        </div>
+        </form>
 
-        <div style={{ display: editando ? "none" : "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+        <div className={`mb-3.5 flex-col gap-2.5 ${editando ? "hidden" : "flex"}`}>
           {datos.email && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: palette.ink }}>
+            <div className="flex items-center gap-2.5 text-sm text-ink">
               <Mail size={15} color={palette.inkSoft} /> {datos.email}
             </div>
           )}
           {datos.telefono && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: palette.ink }}>
+            <div className="flex items-center gap-2.5 text-sm text-ink">
               <Phone size={15} color={palette.inkSoft} /> {datos.telefono}
             </div>
           )}
           {!datos.email && !datos.telefono && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: palette.inkSoft }}>
+            <div className="flex items-center gap-2.5 text-[13px] text-ink-soft">
               <User size={15} /> Sin más datos cargados por ahora.
             </div>
           )}
@@ -234,25 +238,19 @@ export default function ProfilePanel({
 
         {!editando && datos.id && (
           !escribiendoleAOtraPersona && datos.passwordProvisoria ? (
-            <div style={{ padding: "10px 12px", borderRadius: 10, background: palette.claySoft, marginBottom: 16 }}>
-              <p style={{ fontSize: 12.5, color: palette.clayDark, margin: "0 0 8px", fontWeight: 600 }}>
+            <div className="mb-4 rounded-md2 bg-clay-soft px-3 py-2.5">
+              <p className="m-0 mb-2 text-[12.5px] font-semibold text-clay-dark">
                 Todavía tenés la contraseña provisoria (tu teléfono). Cambiala para poder editar tu perfil.
               </p>
               <button
                 onClick={() => { onClose(); router.push("/cambiar-password"); }}
-                style={{ background: "none", border: "none", color: palette.clayDark, fontWeight: 700, fontSize: 12.5, cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                className="border-none bg-transparent p-0 text-[12.5px] font-bold text-clay-dark underline cursor-pointer"
               >
                 Cambiar contraseña
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => setEditando(true)}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "left", gap: 8, width: "100%",
-                background: "none", border: "none", color: palette.inkSoft, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: "0 0 10px", margin: "10px 0", textDecoration: "underline",
-              }}
-            >
+            <button onClick={() => setEditando(true)} className={linkBtnClass}>
               <Pencil size={13} /> Editar datos
             </button>
           )
@@ -260,103 +258,66 @@ export default function ProfilePanel({
 
         {datos.rol !== "ADMIN" && (numeroWa || !escribiendoleAOtraPersona) && (
           <a
-            href={`https://wa.me/${numeroWa}`}
+            href={buildWaLink(numeroWa)}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none",
-              background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 14, padding: "12px 16px", borderRadius: 12, marginBottom: 10,
-            }}
+            className="mb-2.5 flex items-center justify-center gap-2 rounded-md2 bg-[#25D366] px-4 py-3 text-sm font-bold text-white no-underline"
           >
             <WhatsAppIcon size={16} color="#fff" /> {escribiendoleAOtraPersona ? `Escribirle a ${datos.nombre} por WhatsApp` : "Escribir a Monte"}
           </a>
         )}
 
         {planMensual && !modificandoDias && (
-          <div style={{ padding: "10px 12px", borderRadius: 10, background: palette.mossSoft, marginBottom: 10 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: palette.mossDark, margin: "0 0 4px" }}>{planMensual.nombre}</p>
-            <p style={{ fontSize: 13, color: palette.ink, margin: "0 0 10px" }}>
+          <div className="mb-2.5 rounded-md2 bg-moss-soft px-3 py-2.5">
+            <p className="m-0 mb-1 text-xs font-bold text-moss-dark">{planMensual.nombre}</p>
+            <p className="m-0 mb-2.5 text-[13px] text-ink">
               {planMensual.patrones.length > 0
                 ? planMensual.patrones.map((p) => `${DIAS_LARGO[p.diaSemana]} ${p.hora}`).join(" · ")
                 : "Todavía no tiene ningún día fijado."}
             </p>
-            <button
-              onClick={abrirModificarDias}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: palette.moss, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}
-            >
+            <button onClick={abrirModificarDias} className="flex items-center gap-1.5 border-none bg-transparent text-[12.5px] font-bold text-moss cursor-pointer">
               <CalendarDays size={13} /> Modificar días
             </button>
           </div>
         )}
 
         {planMensual && modificandoDias && (
-          <div style={{ marginBottom: 10 }}>
+          <form className="mb-2.5" onSubmit={(e) => { e.preventDefault(); guardarDiasNuevos(); }}>
             {diasNuevos.map((slot, idx) => (
-              <div key={idx} style={{ padding: 12, borderRadius: 10, background: palette.mossSoft, marginBottom: 10 }}>
-                <p style={{ fontSize: 12, fontWeight: 800, color: palette.mossDark, margin: "0 0 10px", textTransform: "uppercase", letterSpacing: 0.4 }}>
+              <div key={idx} className="mb-2.5 rounded-md2 bg-moss-soft p-3">
+                <p className="m-0 mb-2.5 text-xs font-extrabold uppercase tracking-wide text-moss-dark">
                   Día {idx + 1} de {diasNuevos.length}
                 </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
-                  {[1, 2, 3, 4, 5, 6].map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => actualizarSlotDia(idx, { diaSemana: d })}
-                      style={{
-                        padding: "9px 4px", borderRadius: 10, textAlign: "center", cursor: "pointer",
-                        border: `1.5px solid ${slot.diaSemana === d ? palette.moss : palette.line}`,
-                        background: slot.diaSemana === d ? "#fff" : "transparent", fontWeight: 700, fontSize: 13,
-                      }}
-                    >
-                      {DIAS_LARGO[d]}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-                  {HORARIOS_BASE.map((h) => (
-                    <button
-                      key={h}
-                      onClick={() => actualizarSlotDia(idx, { hora: h })}
-                      style={{
-                        padding: "9px 4px", borderRadius: 10, textAlign: "center", cursor: "pointer",
-                        border: `1.5px solid ${slot.hora === h ? palette.moss : palette.line}`,
-                        background: slot.hora === h ? "#fff" : "transparent", fontWeight: 700, fontSize: 13,
-                      }}
-                    >
-                      {h}
-                    </button>
-                  ))}
-                </div>
+                <DiaHoraPicker value={slot} onChange={(cambios) => actualizarSlotDia(idx, cambios)} />
               </div>
             ))}
-            {errorDias && <p style={{ fontSize: 12.5, color: palette.danger, margin: "0 0 10px" }}>{errorDias}</p>}
-            <div style={{ display: "flex", gap: 8 }}>
+            {errorDias && <p className="mb-2.5 text-xs text-danger">{errorDias}</p>}
+            <div className="flex gap-2">
               <button
-                onClick={guardarDiasNuevos}
+                type="submit"
                 disabled={!todosLosDiasNuevosCompletos || guardandoDias}
-                style={{ flex: 1, background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 13.5, border: "none", borderRadius: 10, padding: "10px 0", cursor: "pointer", opacity: !todosLosDiasNuevosCompletos || guardandoDias ? 0.6 : 1 }}
+                className={`flex-1 rounded-md2 border-none bg-moss py-2.5 text-[13.5px] font-bold text-white cursor-pointer ${
+                  !todosLosDiasNuevosCompletos || guardandoDias ? "opacity-60" : ""
+                }`}
               >
                 {guardandoDias ? "Guardando…" : "Guardar días"}
               </button>
               <button
+                type="button"
                 onClick={() => setModificandoDias(false)}
                 disabled={guardandoDias}
-                style={{ background: "none", border: `1.5px solid ${palette.line}`, color: palette.inkSoft, fontWeight: 700, fontSize: 13.5, borderRadius: 10, padding: "10px 16px", cursor: "pointer" }}
+                className="rounded-md2 border-[1.5px] border-line bg-transparent px-4 py-2.5 text-[13.5px] font-bold text-ink-soft cursor-pointer"
               >
                 Cancelar
               </button>
             </div>
-          </div>
+          </form>
         )}
 
         {planMensual && (
           <button
-            className="btn-anim"
             onClick={() => setConfirmando(true)}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-              background: "none", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 14,
-              padding: "12px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10,
-            }}
+            className="btn-anim mb-2.5 flex w-full items-center justify-center gap-2 rounded-md2 border-[1.5px] border-danger bg-transparent px-4 py-3 text-sm font-bold text-danger cursor-pointer"
           >
             <CalendarX size={16} /> Cancelar clases
           </button>
@@ -364,18 +325,13 @@ export default function ProfilePanel({
 
         {editando && escribiendoleAOtraPersona && datos.id && (
           avisoReset ? (
-            <p style={{ fontSize: 12.5, color: palette.mossDark, background: palette.mossSoft, borderRadius: 10, padding: "10px 12px", margin: "0 0 10px" }}>
+            <p className="m-0 mb-2.5 rounded-md2 bg-moss-soft px-3 py-2.5 text-[12.5px] text-moss-dark">
               {avisoReset}
             </p>
           ) : (
             <button
-              className="btn-anim"
               onClick={() => setConfirmandoReset(true)}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-                background: `${palette.dangerSoft}`, border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 14,
-                padding: "12px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10,
-              }}
+              className="btn-anim mb-2.5 flex w-full items-center justify-center gap-2 rounded-md2 border-[1.5px] border-danger bg-danger-soft px-4 py-3 text-sm font-bold text-danger cursor-pointer"
             >
               <KeyRound size={16} /> Restablecer contraseña
             </button>
@@ -384,75 +340,72 @@ export default function ProfilePanel({
 
         {!editando && mostrarLogout && (
           <button
-            className="btn-anim"
             onClick={logout}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-              background: "none", border: `1.5px solid ${palette.danger}`, color: palette.danger, fontWeight: 700, fontSize: 14,
-              padding: "12px 16px", borderRadius: 12, cursor: "pointer",
-            }}
+            className="btn-anim flex w-full items-center justify-center gap-2 rounded-md2 border-[1.5px] border-danger bg-transparent px-4 py-3 text-sm font-bold text-danger cursor-pointer"
           >
             <LogOut size={16} /> Cerrar sesión
           </button>
         )}
       </div>
+
       {confirmando && (
-        <div role="dialog" style={{ position: "fixed", inset: 0, background: "rgba(60,42,32,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 20 }} onClick={(e) => { e.stopPropagation(); if (!cancelando) setConfirmando(false); }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: palette.card, borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 }}>
-            <p style={{ fontWeight: 800, fontSize: 17, margin: "0 0 8px", color: palette.mossDark }}>¿Cancelar las clases mensuales?</p>
-            <p style={{ fontSize: 14, color: palette.inkSoft, margin: "0 0 18px", lineHeight: 1.5 }}>
+        <ConfirmDialog
+          zIndexClass="z-[60]"
+          closable={!cancelando}
+          onClose={() => setConfirmando(false)}
+          title="¿Cancelar las clases mensuales?"
+          description={
+            <>
               Se da de baja el plan mensual de <strong>{datos.nombre} {datos.apellido}</strong>: se cancela lo que quede reservado de acá en adelante (este mes y los siguientes) y esos lugares quedan libres en la agenda. No se puede deshacer.
-            </p>
-            {error && <p style={{ fontSize: 13, color: palette.danger, margin: "0 0 14px" }}>{error}</p>}
-            <button
-              onClick={cancelarClases}
-              disabled={cancelando}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-                background: palette.danger, color: "#fff", fontWeight: 700, fontSize: 14, border: "none",
-                padding: "13px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10, opacity: cancelando ? 0.7 : 1,
-              }}
-            >
-              {cancelando ? "Cancelando…" : "Sí, cancelar clases"}
-            </button>
-            <button
-              onClick={() => setConfirmando(false)}
-              disabled={cancelando}
-              style={{ width: "100%", background: "none", border: "none", color: palette.inkSoft, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0" }}
-            >
-              Volver
-            </button>
-          </div>
-        </div>
+              {error && <p className="m-0 mt-3.5 text-[13px] text-danger">{error}</p>}
+            </>
+          }
+        >
+          <button
+            onClick={cancelarClases}
+            disabled={cancelando}
+            className={`mb-2.5 flex w-full items-center justify-center gap-2 rounded-md2 border-none bg-danger px-4 py-3.5 text-sm font-bold text-white cursor-pointer ${cancelando ? "opacity-70" : ""}`}
+          >
+            {cancelando ? "Cancelando…" : "Sí, cancelar clases"}
+          </button>
+          <button
+            onClick={() => setConfirmando(false)}
+            disabled={cancelando}
+            className="w-full border-none bg-transparent py-1.5 text-[13px] font-semibold text-ink-soft cursor-pointer"
+          >
+            Volver
+          </button>
+        </ConfirmDialog>
       )}
+
       {confirmandoReset && (
-        <div role="dialog" style={{ position: "fixed", inset: 0, background: "rgba(60,42,32,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 20 }} onClick={(e) => { e.stopPropagation(); if (!reseteando) setConfirmandoReset(false); }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: palette.card, borderRadius: 20, padding: 24, width: "100%", maxWidth: 380 }}>
-            <p style={{ fontWeight: 800, fontSize: 17, margin: "0 0 8px", color: palette.mossDark }}>¿Restablecer la contraseña?</p>
-            <p style={{ fontSize: 14, color: palette.inkSoft, margin: "0 0 18px", lineHeight: 1.5 }}>
+        <ConfirmDialog
+          zIndexClass="z-[60]"
+          closable={!reseteando}
+          onClose={() => setConfirmandoReset(false)}
+          title="¿Restablecer la contraseña?"
+          description={
+            <>
               La contraseña de <strong>{datos.nombre} {datos.apellido}</strong> vuelve a ser su teléfono (sin espacios ni guiones). Va a tener que cambiarla de nuevo antes de poder editar su perfil. Su contraseña actual deja de funcionar.
-            </p>
-            {error && <p style={{ fontSize: 13, color: palette.danger, margin: "0 0 14px" }}>{error}</p>}
-            <button
-              onClick={restablecerPassword}
-              disabled={reseteando}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-                background: palette.moss, color: "#fff", fontWeight: 700, fontSize: 14, border: "none",
-                padding: "13px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 10, opacity: reseteando ? 0.7 : 1,
-              }}
-            >
-              {reseteando ? "Restableciendo…" : "Sí, restablecer"}
-            </button>
-            <button
-              onClick={() => setConfirmandoReset(false)}
-              disabled={reseteando}
-              style={{ width: "100%", background: "none", border: "none", color: palette.inkSoft, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0" }}
-            >
-              Volver
-            </button>
-          </div>
-        </div>
+              {error && <p className="m-0 mt-3.5 text-[13px] text-danger">{error}</p>}
+            </>
+          }
+        >
+          <button
+            onClick={restablecerPassword}
+            disabled={reseteando}
+            className={`mb-2.5 flex w-full items-center justify-center gap-2 rounded-md2 border-none bg-moss px-4 py-3.5 text-sm font-bold text-white cursor-pointer ${reseteando ? "opacity-70" : ""}`}
+          >
+            {reseteando ? "Restableciendo…" : "Sí, restablecer"}
+          </button>
+          <button
+            onClick={() => setConfirmandoReset(false)}
+            disabled={reseteando}
+            className="w-full border-none bg-transparent py-1.5 text-[13px] font-semibold text-ink-soft cursor-pointer"
+          >
+            Volver
+          </button>
+        </ConfirmDialog>
       )}
     </div>
   );

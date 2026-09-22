@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Wallet, Repeat } from "lucide-react";
-import { FONT_DISPLAY, palette, btnGhost, btnSecondary, card } from "../ui";
+import { palette, btnGhost, btnSecondary, card } from "../ui";
 import ErrorBanner from "../ErrorBanner";
 
 type PlanType = {
@@ -42,34 +42,34 @@ export default function PlansList() {
 
   return (
     <div>
-      <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 600, margin: "8px 0 4px", color: palette.moss }}>Elegí tu plan</h1>
-      <p style={{ color: palette.inkSoft, fontSize: 14, margin: "0 0 20px" }}>
+      <h1 className="mb-1 mt-2 font-display text-2xl font-semibold text-moss">Elegí tu plan</h1>
+      <p className="m-0 mb-5 text-sm text-ink-soft">
         Comprás tus clases acá; el día y el horario te los asigna la profesora o administración según la disponibilidad de la Agenda.
       </p>
 
       <ErrorBanner message={error} />
 
-      {loading && <p style={{ color: palette.inkSoft, textAlign: "center", padding: 20 }}>Cargando planes…</p>}
+      {loading && <p className="p-5 text-center text-ink-soft">Cargando planes…</p>}
 
       {planes.map((p) => (
-        <div key={p.id} style={{ ...card, marginBottom: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div key={p.id} className={`${card} mb-3.5`}>
+          <div className="mb-2 flex items-start justify-between">
+            <div className="flex items-center gap-2">
               {p.tipo === "MENSUAL" ? <Repeat size={17} color={palette.moss} /> : <Wallet size={17} color={palette.moss} />}
-              <p style={{ fontWeight: 800, fontSize: 16, margin: 0 }}>{p.nombre}</p>
+              <p className="m-0 text-base font-extrabold">{p.nombre}</p>
             </div>
-            <p style={{ fontWeight: 800, fontSize: 16, margin: 0, color: palette.clay }}>
+            <p className="m-0 text-base font-extrabold text-clay">
               ${Number(p.precio).toLocaleString("es-AR")}
             </p>
           </div>
-          <p style={{ fontSize: 14, color: palette.inkSoft, margin: "0 0 14px" }}>{desc(p)}</p>
-          <button style={btnGhost} disabled={comprando === p.id} onClick={() => comprar(p)}>
+          <p className="m-0 mb-3.5 text-sm text-ink-soft">{desc(p)}</p>
+          <button className={btnGhost} disabled={comprando === p.id} onClick={() => comprar(p)}>
             {comprando === p.id ? "Comprando…" : "Comprar este plan"}
           </button>
         </div>
       ))}
 
-      <button style={btnSecondary} onClick={() => router.push("/")}>Volver</button>
+      <button className={btnSecondary} onClick={() => router.push("/")}>Volver</button>
     </div>
   );
 }

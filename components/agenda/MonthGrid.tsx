@@ -1,7 +1,7 @@
 "use client";
 import { Fragment, ReactNode, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown, Star } from "lucide-react";
-import { FONT_DISPLAY, palette, card, DIAS } from "../ui";
+import { palette, card, DIAS } from "../ui";
 import Reveal from "../Reveal";
 
 export type DiaCalendario = { fecha: string; weekday: number; status: string; used: number; total: number; motivo: string | null };
@@ -14,6 +14,17 @@ const MESES = [
 function toKey(d: Date) {
   return d.toISOString().slice(0, 10);
 }
+
+// Clases de fondo/borde/texto según el estado del día, y el color hex
+// equivalente para los pocos casos (íconos de lucide-react) que no
+// pueden tomar una className de Tailwind.
+const ESTADO_CLASES: Record<string, { bg: string; border: string; text: string; hex: string }> = {
+  disponible: { bg: "bg-moss-soft", border: "border-moss", text: "text-moss-dark", hex: palette.mossDark },
+  completo: { bg: "bg-danger-soft", border: "border-danger-soft", text: "text-danger", hex: palette.danger },
+  bloqueado: { bg: "bg-[#F0EDE3]", border: "border-[#F0EDE3]", text: "text-ink-soft", hex: palette.inkSoft },
+  cerrado: { bg: "bg-transparent", border: "border-line", text: "text-ink-soft", hex: palette.inkSoft },
+};
+const ESTADO_DEFAULT = { bg: "bg-transparent", border: "border-transparent", text: "text-ink-soft", hex: palette.inkSoft };
 
 type Props = {
   /** Día actualmente expandido (controlado por quien usa MonthGrid). null = ninguno. */
@@ -74,31 +85,31 @@ export default function MonthGrid({
   const semanas = Array.from({ length: 6 }, (_, i) => celdas.slice(i * 7, i * 7 + 7));
 
   return (
-    <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px", borderBottom: `1px solid ${palette.line}` }}>
-        <button onClick={() => cambiarMes(-1)} style={iconBtn} aria-label="Mes anterior">
+    <div className={`${card} overflow-hidden p-0`}>
+      <div className="flex items-center justify-between border-b border-line px-4 py-4">
+        <button onClick={() => cambiarMes(-1)} className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md2 border-none bg-moss-soft text-moss cursor-pointer" aria-label="Mes anterior">
           <ChevronLeft size={20} />
         </button>
-        <p style={{ fontFamily: FONT_DISPLAY, fontSize: 19, fontWeight: 600, margin: 0, color: palette.mossDark, textTransform: "capitalize" }}>
+        <p className="m-0 font-display text-[19px] font-semibold capitalize text-moss-dark">
           {MESES[cursor.getMonth()]} {cursor.getFullYear()}
         </p>
-        <button onClick={() => cambiarMes(1)} style={iconBtn} aria-label="Mes siguiente">
+        <button onClick={() => cambiarMes(1)} className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md2 border-none bg-moss-soft text-moss cursor-pointer" aria-label="Mes siguiente">
           <ChevronRight size={20} />
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", padding: "10px 6px 0" }}>
+      <div className="grid grid-cols-7 px-1.5 pt-2.5">
         {DIAS.map((d) => (
-          <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 800, color: palette.inkSoft, textTransform: "uppercase", padding: "4px 0" }}>{d}</div>
+          <div key={d} className="py-1 text-center text-[11px] font-extrabold uppercase text-ink-soft">{d}</div>
         ))}
       </div>
 
-      <div style={{ padding: "4px 6px 10px" }}>
+      <div className="px-1.5 pb-2.5 pt-1">
         {semanas.map((semana, i) => {
           const expandidoEnEstaSemana = diaExpandido && semana.some((c) => c.key === diaExpandido.fecha);
           return (
             <Fragment key={i}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 4 }}>
+              <div className="grid grid-cols-7 gap-1">
                 {semana.map(({ fecha, key, delMesActual, info }) => {
                   const esHoy = key === toKey(hoy);
                   const esPasado = fecha < hoy;
@@ -108,40 +119,30 @@ export default function MonthGrid({
                   const expandible = delMesActual && !esPasado && esEstadoAbrible && !loading;
                   const estaExpandido = diaExpandido?.fecha === key;
 
-                  let bg = "transparent", borderColor = "transparent", textColor: string = palette.inkSoft;
-                  if (delMesActual && !esPasado) {
-                    if (status === "disponible") { bg = palette.mossSoft; borderColor = palette.moss; textColor = palette.mossDark; }
-                    else if (status === "completo") { bg = palette.dangerSoft; borderColor = palette.dangerSoft; textColor = palette.danger; }
-                    else if (status === "bloqueado") { bg = "#F0EDE3"; borderColor = "#F0EDE3"; textColor = palette.inkSoft; }
-                    else if (status === "cerrado") { bg = "transparent"; borderColor = palette.line; textColor = palette.inkSoft; }
-                  }
-                  if (estaExpandido) { borderColor = palette.clay; }
+                  const estado = delMesActual && !esPasado ? ESTADO_CLASES[status] ?? ESTADO_DEFAULT : ESTADO_DEFAULT;
+                  let borderClass = estado.border;
+                  if (esHoy && !estaExpandido) borderClass = "border-clay";
+                  if (estaExpandido) borderClass = "border-clay";
 
                   return (
                     <button
                       key={key}
                       disabled={!expandible}
-                      className="day-cell"
+                      className={`day-cell relative flex aspect-square min-w-0 flex-col items-center justify-center gap-px rounded-md2 border-[1.5px] px-px py-0.5 ${estado.bg} ${borderClass} ${
+                        expandible ? "cursor-pointer" : "cursor-default"
+                      } ${delMesActual ? (esPasado ? "opacity-35" : "opacity-100") : "opacity-[0.28]"}`}
                       onClick={() => info && expandible && onToggleDay(estaExpandido ? null : info)}
-                      style={{
-                        minWidth: 0, aspectRatio: "1 / 1", borderRadius: 10, padding: "2px 1px",
-                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
-                        border: `1.5px solid ${esHoy && !estaExpandido ? palette.clay : borderColor}`,
-                        background: bg, cursor: expandible ? "pointer" : "default",
-                        opacity: delMesActual ? (esPasado ? 0.35 : 1) : 0.28,
-                        position: "relative",
-                      }}
                     >
                       {esDestacado && delMesActual && (
-                        <Star size={9} color={palette.clay} fill={palette.clay} style={{ position: "absolute", top: 3, right: 3 }} />
+                        <Star size={9} color={palette.clay} fill={palette.clay} className="absolute right-[3px] top-[3px]" />
                       )}
-                      <span style={{ fontSize: "clamp(12px, 3.6vw, 15px)", fontWeight: esHoy ? 800 : 700, color: esHoy ? palette.clay : textColor }}>{fecha.getDate()}</span>
+                      <span className={`text-[clamp(12px,3.6vw,15px)] ${esHoy ? "font-extrabold text-clay" : `font-bold ${estado.text}`}`}>{fecha.getDate()}</span>
                       {expandible && (
                         <ChevronDown
                           size={12}
-                          color={textColor}
+                          color={estado.hex}
                           strokeWidth={3}
-                          style={{ transition: "transform 0.15s", transform: estaExpandido ? "rotate(180deg)" : "none" }}
+                          className={`transition-transform duration-150 ${estaExpandido ? "rotate-180" : ""}`}
                         />
                       )}
                     </button>
@@ -151,7 +152,7 @@ export default function MonthGrid({
 
               {expandidoEnEstaSemana && diaExpandido && (
                 <Reveal>
-                  <div style={{ margin: "8px 2px 12px", borderRadius: 14, background: palette.bg, border: `1px solid ${palette.line}`, padding: 14 }}>
+                  <div className="mx-0.5 my-2 rounded-xl2 border border-line bg-bg p-3.5">
                     {renderPanel(diaExpandido)}
                   </div>
                 </Reveal>
@@ -163,8 +164,3 @@ export default function MonthGrid({
     </div>
   );
 }
-
-const iconBtn = {
-  width: 34, height: 34, borderRadius: 10, border: "none", background: palette.mossSoft,
-  color: palette.moss, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0,
-} as const;

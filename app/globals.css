@@ -1,71 +1,73 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&display=swap');
 
-* { box-sizing: border-box; }
-body { margin: 0; }
-button { font-family: inherit; }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@media (max-width: 760px) {
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    @apply font-sans text-ink bg-bg;
+  }
+  button {
+    font-family: inherit;
+  }
+}
+
+/* ---------- Componentes reutilizables ---------- */
+@layer components {
+  /* Botones */
+  .btn-primary {
+    @apply w-full flex items-center justify-center gap-2 rounded-xl2 border-none bg-clay
+      px-5 py-4 text-base font-bold text-white cursor-pointer btn-anim;
+  }
+  .btn-primary-disabled {
+    @apply btn-primary bg-[#D8CFC0] text-[#8C876F] cursor-not-allowed;
+  }
+  .btn-login {
+    @apply flex items-center justify-center gap-2 rounded-xl2 border-none bg-clay
+      px-5 py-3.5 text-base font-bold text-white cursor-pointer btn-anim;
+  }
+  .btn-secondary {
+    @apply w-full rounded-xl2 border-[1.5px] border-line bg-white px-5 py-4
+      text-base font-bold text-ink cursor-pointer btn-anim;
+  }
+  .btn-ghost {
+    @apply rounded-md2 border-[1.5px] border-moss bg-transparent px-4 py-2.5
+      text-sm font-bold text-moss cursor-pointer btn-anim;
+  }
+
+  /* Superficies */
+  .card-base {
+    @apply rounded-2xl2 border border-line bg-card p-5;
+  }
+  .input-field {
+    @apply w-full rounded-lg2 border-[1.5px] border-line bg-white px-3.5 py-[13px]
+      text-[15px] text-ink font-sans box-border;
+  }
+
+  /* ---------- Landing (Home) ---------- */
+  .footer-card {
+    @apply px-4 pt-6 pb-3.5 md:px-6 md:pt-10 md:pb-6;
+  }
+  .spring-divider {
+    @apply flex gap-1.5 items-center;
+  }
+}
+
+@layer utilities {
   .hide-on-mobile { display: none !important; }
   .show-on-desktop { display: none !important; }
-}
-
-/* ---------- Landing (Home) ---------- */
-.landing-hero {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  align-items: center;
-  gap: 48px;
-  padding: 64px 24px 56px;
-}
-.landing-section {
-  padding: 64px 24px;
-}
-.benefits-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-.compare-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-.steps-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-.footer-grid {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
-  gap: 24px;
-}
-.footer-card {
-  padding: 24px 16px 14px;
-}
-.spring-divider {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-@media (max-width: 860px) {
-  .landing-hero { grid-template-columns: 1fr; padding: 40px 20px 40px; text-align: center; }
-  .landing-section { padding: 44px 20px; }
-  .benefits-grid { grid-template-columns: 1fr; }
-  .compare-grid { grid-template-columns: 1fr; }
-  .steps-grid { grid-template-columns: 1fr; }
-  .footer-grid { grid-template-columns: 1fr 1fr; gap: 30px 24px; }
-  .footer-card { padding: 40px 24px 24px; }
-}
-
-@media (max-width: 520px) {
-  .footer-grid { grid-template-columns: 1fr; gap: 26px; }
-  .footer-card { padding: 36px 20px 22px; }
+  @media (min-width: 761px) {
+    .hide-on-mobile { display: revert !important; }
+    .show-on-desktop { display: revert !important; }
+  }
 }
 
 /* ---------- Animaciones y micro-interacciones ---------- */
-
 /* Por defecto todo es visible y estático; el movimiento se activa
    solo si el usuario no pidió "reducir movimiento" en su sistema. */
 .reveal { opacity: 1; transform: none; }
@@ -79,19 +81,12 @@ button { font-family: inherit; }
   }
   .reveal.is-visible { opacity: 1; transform: none; }
 
-  .float-anim { animation: gentle-float 3.5s ease-in-out infinite; }
-  @keyframes gentle-float {
-    0%, 100% { transform: translateY(2px); }
-    50% { transform: translateY(-10px); }
-  }
-
-  .wa-pulse { animation: wa-pulse 2.6s ease-out infinite; }
+  /* Imagen del hero: flota suavemente. Botón de WhatsApp: pulso que se
+     pausa al pasar el mouse. Las animaciones en sí (keyframes +
+     duración) están centralizadas en tailwind.config.ts. */
+  .float-anim { @apply animate-float; }
+  .wa-pulse { @apply animate-wa-pulse; }
   .wa-pulse:hover { animation-play-state: paused; }
-  @keyframes wa-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5); }
-    70% { box-shadow: 0 0 0 16px rgba(37, 211, 102, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
-  }
 }
 
 /* Tarjetas: se levantan un poco al pasar el mouse o al tocarlas (el
@@ -141,6 +136,3 @@ button { font-family: inherit; }
 /* Flechitas dentro de botones/tarjetas: se corren un poco al hacer hover. */
 .arrow-nudge { display: inline-flex; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .btn-anim:hover .arrow-nudge, .hover-lift:hover .arrow-nudge { transform: translateX(4px); }
-
-
-

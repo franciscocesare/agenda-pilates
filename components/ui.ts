@@ -1,10 +1,12 @@
-// Design tokens compartidos por toda la interfaz.
-// Paleta tomada del Instagram real del estudio (@monte.pilates).
-import type { CSSProperties } from "react";
-
-export const FONT = "'Manrope', ui-sans-serif, system-ui, sans-serif";
-export const FONT_DISPLAY = "'Fraunces', 'Manrope', ui-serif, serif";
-
+// Nombres de estilo compartidos por toda la interfaz.
+// Los colores y tipografías reales viven en un solo lugar:
+// tailwind.config.ts. Este archivo solo expone:
+//   - `palette`: los mismos colores en hexadecimal, para los pocos
+//     casos en que una librería (íconos de lucide-react, SVGs) pide
+//     un color en vez de una className de Tailwind.
+//   - clases de Tailwind con nombre para los patrones que se repiten
+//     en muchos componentes (botones, tarjetas, inputs), para no
+//     repetir la misma lista de utilities en cada archivo.
 export const palette = {
   bg: "#F3E9DB",
   card: "#FFFBF4",
@@ -21,25 +23,13 @@ export const palette = {
   dangerSoft: "#F6E2DE",
 } as const;
 
-export const btnPrimary: CSSProperties = {
-  width: "100%", padding: "16px 20px", borderRadius: 14, border: "none",
-  background: palette.clay, color: "#fff", fontWeight: 700, fontSize: 16,
-  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-};
-export const btnPrimaryDisabled: CSSProperties = { ...btnPrimary, background: "#D8CFC0", color: "#8C876F", cursor: "not-allowed" };
-export const btnSecondary: CSSProperties = {
-  width: "100%", padding: "16px 20px", borderRadius: 14, border: `1.5px solid ${palette.line}`,
-  background: "#fff", color: palette.ink, fontWeight: 700, fontSize: 16, cursor: "pointer",
-};
-export const btnGhost: CSSProperties = {
-  padding: "10px 16px", borderRadius: 10, border: `1.5px solid ${palette.moss}`,
-  background: "transparent", color: palette.moss, fontWeight: 700, fontSize: 14, cursor: "pointer",
-};
-export const card: CSSProperties = { background: palette.card, borderRadius: 16, border: `1px solid ${palette.line}`, padding: 20 };
-export const inputStyle: CSSProperties = {
-  width: "100%", padding: "13px 14px", borderRadius: 12, border: `1.5px solid ${palette.line}`,
-  fontSize: 15, fontFamily: FONT, color: palette.ink, background: "#fff", boxSizing: "border-box",
-};
+export const btnPrimary = "btn-primary";
+export const btnLogin = "btn-login";
+export const btnPrimaryDisabled = "btn-primary-disabled";
+export const btnSecondary = "btn-secondary";
+export const btnGhost = "btn-ghost";
+export const card = "card-base";
+export const inputStyle = "input-field";
 
 export { DIAS, DIAS_LARGO, HORARIOS_BASE, WHATSAPP_NUMBER, CUPO_DEFAULT } from "@/lib/constants";
 

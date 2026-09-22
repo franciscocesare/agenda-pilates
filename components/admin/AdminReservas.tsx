@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Search, Plus, Check, UserX, X, Wallet, UserCircle } from "lucide-react";
-import { FONT_DISPLAY, palette, card, btnPrimary, btnGhost, inputStyle, fmtLarga } from "../ui";
-import { WHATSAPP_NUMBER } from "@/lib/constants";
+import { palette, card, btnPrimary, btnGhost, inputStyle, fmtLarga } from "../ui";
+import { buildWaLink, mensajeRecordatorioPago } from "@/lib/whatsapp";
+import { patchReservationEstado } from "@/lib/api/reservations";
+import { fetchCreditosDeAlumno } from "@/lib/api/payments";
 import ManualBookingForm from "./ManualBookingForm";
 import ProfilePanel from "../ProfilePanel";
 import { WhatsAppIcon } from "../Icons/WhatsAppIcon";
@@ -12,7 +14,6 @@ type Reserva = {
   user: { id: string; nombre: string; apellido: string; telefono: string; email: string };
 };
 type PlanMensualInfo = { paymentId: string; nombre: string; clasesPorSemana: number; patrones: { diaSemana: number; hora: string }[] };
-type CreditoAlumno = { id: string; nombre: string; tipo: "SUELTA" | "MENSUAL"; clasesPorSemana: number | null; patrones: { diaSemana: number; hora: string }[] };
 
 export default function AdminReservas({ alumnoInicial }: { alumnoInicial?: { id: string; nombre: string } }) {
   const [q, setQ] = useState(alumnoInicial?.nombre ?? "");
@@ -63,7 +64,7 @@ export default function AdminReservas({ alumnoInicial }: { alumnoInicial?: { id:
   const abrirPerfil = async (user: Reserva["user"]) => {
     setVerPerfil(user);
     setPlanMensualPerfil(undefined);
-    const creditos: CreditoAlumno[] = await fetch(`/api/admin/payments?userId=${user.id}`).then((r) => r.json());
+    const creditos = await fetchCreditosDeAlumno(user.id);
     const planMensual = creditos.find((c) => c.tipo === "MENSUAL" && c.patrones.length > 0);
     if (planMensual) {
       setPlanMensualPerfil({
@@ -77,56 +78,51 @@ export default function AdminReservas({ alumnoInicial }: { alumnoInicial?: { id:
 
   const cambiarEstado = async (id: string, estado: string) => {
     setActualizando(id);
-    await fetch(`/api/admin/reservations/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ estado }),
-    });
+    await patchReservationEstado(id, estado);
     setActualizando(null);
     cargarPendientes();
     if (q) cargar(q);
   };
 
-  const estadoStyle = (e: string) => {
-    if (e === "CONFIRMADO") return { bg: palette.mossSoft, color: palette.moss, label: "Confirmado" };
-    if (e === "PENDIENTE_PAGO") return { bg: palette.claySoft, color: palette.clayDark, label: "Pendiente de pago" };
-    if (e === "CANCELADO") return { bg: palette.dangerSoft, color: palette.danger, label: "Cancelado" };
-    if (e === "AUSENTE") return { bg: "#F0EDE3", color: palette.inkSoft, label: "Ausente" };
-    return { bg: palette.claySoft, color: palette.clayDark, label: "Completado" };
+  const estadoClases = (e: string) => {
+    if (e === "CONFIRMADO") return { badge: "bg-moss-soft text-moss", label: "Confirmado" };
+    if (e === "PENDIENTE_PAGO") return { badge: "bg-clay-soft text-clay-dark", label: "Pendiente de pago" };
+    if (e === "CANCELADO") return { badge: "bg-danger-soft text-danger", label: "Cancelado" };
+    if (e === "AUSENTE") return { badge: "bg-[#F0EDE3] text-ink-soft", label: "Ausente" };
+    return { badge: "bg-clay-soft text-clay-dark", label: "Completado" };
   };
 
   const linkRecordatorio = (r: Reserva) => {
     const fechaFmt = new Date(r.fecha).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
-    const texto = `¡Hola ${r.user.nombre}! Te recuerdo tu clase del ${fechaFmt} a las ${r.hora} hs — todavía me falta el pago de esa clase suelta para confirmártela 🌿`;
-    return `https://wa.me/${r.user.telefono.replace(/[^\d]/g, "") || WHATSAPP_NUMBER}?text=${encodeURIComponent(texto)}`;
+    return buildWaLink(r.user.telefono, mensajeRecordatorioPago(r.user.nombre, fechaFmt, r.hora));
   };
 
   const renderReserva = (r: Reserva) => {
-    const es = estadoStyle(r.estado);
+    const es = estadoClases(r.estado);
     const enCurso = actualizando === r.id;
     return (
-      <div key={r.id} style={{ ...card, marginBottom: 10, padding: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <p style={{ fontWeight: 800, margin: 0 }}>{r.user.nombre} {r.user.apellido}</p>
+      <div key={r.id} className={`${card} mb-2.5 p-4`}>
+        <div className="mb-2 flex justify-between">
+          <div className="flex items-center gap-2">
+            <p className="m-0 font-extrabold">{r.user.nombre} {r.user.apellido}</p>
             <button
               onClick={() => abrirPerfil(r.user)}
               title={`Ver perfil de ${r.user.nombre} '${r.user.apellido}'`}
-              style={{ background: "none", border: "none", cursor: "pointer", color: palette.moss, display: "flex", padding: 0 }}
+              className="flex border-none bg-transparent p-0 text-moss cursor-pointer"
             >
               <UserCircle size={20} />
             </button>
           </div>
-            <span style={{ background: es.bg, color: es.color, fontSize: 12, fontWeight: 700, padding: "4px 9px", borderRadius: 999 }}>{es.label}</span>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${es.badge}`}>{es.label}</span>
         </div>
-        <p style={{ color: palette.inkSoft, fontSize: 13, margin: "0 0 12px", textTransform: "capitalize" }}>
+        <p className="m-0 mb-3 text-[13px] capitalize text-ink-soft">
           {fmtLarga(new Date(r.fecha))} · {r.hora} hs · {r.user.telefono} {r.recurringReservationId ? "· plan mensual" : "· clase suelta"}
         </p>
 
         {r.estado === "PENDIENTE_PAGO" && (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div className="flex flex-wrap gap-2">
             <button
-              style={{ ...btnGhost, opacity: enCurso ? 0.6 : 1, borderColor: palette.moss, color: palette.moss, display: "flex", alignItems: "center", gap: 6 }}
+              className={`${btnGhost} flex items-center gap-1.5 !border-moss !text-moss ${enCurso ? "opacity-60" : ""}`}
               disabled={enCurso}
               onClick={() => cambiarEstado(r.id, "CONFIRMAR_PAGO")}
             >
@@ -136,12 +132,12 @@ export default function AdminReservas({ alumnoInicial }: { alumnoInicial?: { id:
               href={linkRecordatorio(r)}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ ...btnGhost, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}
+              className={`${btnGhost} flex items-center gap-1.5 no-underline`}
             >
               <WhatsAppIcon size={16} /> Recordarle
             </a>
             <button
-              style={{ ...btnGhost, opacity: enCurso ? 0.6 : 1, borderColor: palette.danger, color: palette.danger, display: "flex", alignItems: "center", gap: 6 }}
+              className={`${btnGhost} flex items-center gap-1.5 !border-danger !text-danger ${enCurso ? "opacity-60" : ""}`}
               disabled={enCurso}
               onClick={() => cambiarEstado(r.id, "CANCELADO")}
             >
@@ -151,14 +147,14 @@ export default function AdminReservas({ alumnoInicial }: { alumnoInicial?: { id:
         )}
 
         {r.estado === "CONFIRMADO" && (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button style={{ ...btnGhost, opacity: enCurso ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }} disabled={enCurso} onClick={() => cambiarEstado(r.id, "COMPLETADO")}>
+          <div className="flex flex-wrap gap-2">
+            <button className={`${btnGhost} flex items-center gap-1.5 ${enCurso ? "opacity-60" : ""}`} disabled={enCurso} onClick={() => cambiarEstado(r.id, "COMPLETADO")}>
               <Check size={14} /> Completado
             </button>
-            <button style={{ ...btnGhost, opacity: enCurso ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }} disabled={enCurso} onClick={() => cambiarEstado(r.id, "AUSENTE")}>
+            <button className={`${btnGhost} flex items-center gap-1.5 ${enCurso ? "opacity-60" : ""}`} disabled={enCurso} onClick={() => cambiarEstado(r.id, "AUSENTE")}>
               <UserX size={14} /> Ausente
             </button>
-            <button style={{ ...btnGhost, opacity: enCurso ? 0.6 : 1, borderColor: palette.danger, color: palette.danger, display: "flex", alignItems: "center", gap: 6 }} disabled={enCurso} onClick={() => cambiarEstado(r.id, "CANCELADO")}>
+            <button className={`${btnGhost} flex items-center gap-1.5 !border-danger !text-danger ${enCurso ? "opacity-60" : ""}`} disabled={enCurso} onClick={() => cambiarEstado(r.id, "CANCELADO")}>
               <X size={14} /> Cancelar
             </button>
           </div>
@@ -169,13 +165,13 @@ export default function AdminReservas({ alumnoInicial }: { alumnoInicial?: { id:
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "8px 0 2px", color: palette.moss }}>Reservas</h1>
-        <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>Buscá a una alumna/o para asignar una reserva.</p>
+      <div className="mb-5">
+        <h1 className="mb-0.5 mt-2 font-display text-[22px] font-semibold text-moss">Reservas</h1>
+        <p className="m-0 text-sm text-ink-soft">Buscá a una alumna/o para asignar una reserva.</p>
       </div>
 
       {!mostrarForm && (
-        <button style={{ ...btnPrimary, marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={() => setMostrarForm(true)}>
+        <button className={`${btnPrimary} mb-4 flex items-center justify-center gap-2`} onClick={() => setMostrarForm(true)}>
           <Plus size={18} /> Asignar turno a un alumno
         </button>
       )}
@@ -185,36 +181,30 @@ export default function AdminReservas({ alumnoInicial }: { alumnoInicial?: { id:
       )}
 
       {pendientes.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ fontWeight: 800, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, color: palette.clayDark, margin: "0 0 10px" }}>
+        <div className="mb-6">
+          <p className="m-0 mb-2.5 text-[13px] font-extrabold uppercase tracking-wide text-clay-dark">
             Pendientes de pago ({pendientes.length})
           </p>
           {pendientes.map(renderReserva)}
         </div>
       )}
 
-          <div style={{ margin: "20px 0 10px" }}>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, margin: "8px 0 2px", color: palette.moss }}>Ver reservas</h1>
-        <p style={{ color: palette.inkSoft, fontSize: 14, margin: 0 }}>Buscá a una alumna/o para ver sus clases.</p>
+      <div className="my-5 mb-2.5">
+        <h1 className="mb-0.5 mt-2 font-display text-[22px] font-semibold text-moss">Ver reservas</h1>
+        <p className="m-0 text-sm text-ink-soft">Buscá a una alumna/o para ver sus clases.</p>
       </div>
-      <div style={{ position: "relative", marginBottom: 16 }}>
-        <Search size={17} color={palette.inkSoft} style={{ position: "absolute", left: 13, top: 14 }} />
+      <div className="relative mb-4">
+        <Search size={17} color={palette.inkSoft} className="absolute left-[13px] top-3.5" />
         <input
-          style={{ ...inputStyle, paddingLeft: 40 }}
+          className={`${inputStyle} pl-10`}
           placeholder="Buscar alumna por nombre o teléfono…"
           value={q}
           onChange={(e) => { setQ(e.target.value); cargar(e.target.value); }}
         />
       </div>
 
-      {/* {!buscado && !mostrarForm && (
-        <p style={{ color: palette.inkSoft, fontSize: 13, textAlign: "center", padding: "20px 10px" }}>
-          Escribí un nombre o teléfono para ver los turnos de una alumna.
-        </p>
-      )} */}
-
-      {loading && <p style={{ color: palette.inkSoft, textAlign: "center", padding: 20 }}>Buscando…</p>}
-      {buscado && !loading && reservas.length === 0 && <p style={{ color: palette.inkSoft, textAlign: "center", padding: 20 }}>No encontramos turnos para esa búsqueda.</p>}
+      {loading && <p className="p-5 text-center text-ink-soft">Buscando…</p>}
+      {buscado && !loading && reservas.length === 0 && <p className="p-5 text-center text-ink-soft">No encontramos turnos para esa búsqueda.</p>}
 
       {reservas.map(renderReserva)}
 

@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { Star, LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { FONT_DISPLAY, palette, btnGhost } from "../ui";
-import { WHATSAPP_NUMBER } from "@/lib/constants";
+import { palette, btnGhost } from "../ui";
+import { buildWaLink } from "@/lib/whatsapp";
 import MonthGrid, { DiaCalendario } from "./MonthGrid";
 import { HorarioRow, Referencia, HorarioDia } from "./HorarioRow";
 
@@ -44,18 +44,18 @@ export default function AgendaCalendar() {
     const texto = nombre
       ? `¡Hola! Soy ${nombre} y quiero pedir un turno para el ${fechaFmt} a las ${hora} hs 🌿`
       : `¡Hola! Quiero pedir un turno para el ${fechaFmt} a las ${hora} hs 🌿`;
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(texto)}`;
+    return buildWaLink(undefined, texto);
   };
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 600, margin: "8px 0 6px", color: palette.moss }}>Agenda</h1>
-        <p style={{ color: palette.inkSoft, fontSize: 15, margin: 0, maxWidth: 560 }}>
+      <div className="mb-5">
+        <h1 className="mb-1.5 mt-2 font-display text-[26px] font-semibold text-moss">Agenda</h1>
+        <p className="m-0 max-w-[560px] text-[15px] text-ink-soft">
           Mirá qué días tienen lugar. Tocá el día para ver los horarios — los turnos los asigna la profesora, así que si te sirve uno pedíselo por WhatsApp.
         </p>
         {!sesion && (
-          <button onClick={() => router.push("/login")} style={{ ...btnGhost, display: "inline-flex", alignItems: "center", gap: 8, marginTop: 14 }}>
+          <button onClick={() => router.push("/login")} className={`${btnGhost} mt-3.5 inline-flex items-center gap-2`}>
             <LogIn size={15} /> Ingresá para ver tus clases reservadas
           </button>
         )}
@@ -68,13 +68,13 @@ export default function AgendaCalendar() {
         fechasDestacadas={misFechas}
         renderPanel={(dia) => (
           <div>
-            <p style={{ fontWeight: 800, fontSize: 14, margin: "0 0 12px", color: palette.mossDark, textTransform: "capitalize" }}>
+            <p className="m-0 mb-3 text-sm font-extrabold capitalize text-moss-dark">
               {new Date(dia.fecha + "T00:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
             </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {!horarios && <p style={{ color: palette.inkSoft, fontSize: 14 }}>Cargando horarios…</p>}
-              {horarios?.length === 0 && <p style={{ color: palette.inkSoft, fontSize: 14 }}>No hay horarios configurados para este día.</p>}
+            <div className="flex flex-col gap-2">
+              {!horarios && <p className="text-sm text-ink-soft">Cargando horarios…</p>}
+              {horarios?.length === 0 && <p className="text-sm text-ink-soft">No hay horarios configurados para este día.</p>}
               {horarios?.map((h) => {
                 const quedan = h.total - h.used;
                 const disponible = !h.cancelado && quedan > 0;
@@ -82,12 +82,12 @@ export default function AgendaCalendar() {
                 return (
                   <HorarioRow key={h.hora} hora={h.hora}>
                     {esMiClase ? (
-                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: palette.clay, background: palette.mossSoft, padding: "6px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>
+                      <span className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-moss-soft px-2.5 py-1.5 text-xs font-bold text-clay">
                         <Star size={13} color={palette.clay} fill={palette.clay} /> Tu clase
                       </span>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: disponible ? palette.moss : palette.inkSoft, whiteSpace: "nowrap" }}>
+                      <div className="flex items-center gap-2.5">
+                        <span className={`whitespace-nowrap text-xs font-bold ${disponible ? "text-moss" : "text-ink-soft"}`}>
                           {h.cancelado ? "" : `Quedan ${quedan} lugar${quedan === 1 ? "" : "es"}`}
                         </span>
                         {disponible ? (
@@ -95,16 +95,12 @@ export default function AgendaCalendar() {
                             href={linkSolicitud(dia.fecha, h.hora)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{
-                              display: "flex", alignItems: "center", gap: 6, textDecoration: "none",
-                              background: "#25D366", color: "#fff", fontWeight: 700, fontSize: 13,
-                              padding: "8px 12px", borderRadius: 999, whiteSpace: "nowrap",
-                            }}
+                            className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#25D366] px-3 py-2 text-[13px] font-bold text-white no-underline"
                           >
-                           Pedí este lugar
+                            Pedí este lugar
                           </a>
                         ) : (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: palette.danger, background: palette.dangerSoft, padding: "6px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>
+                          <span className="whitespace-nowrap rounded-full bg-danger-soft px-2.5 py-1.5 text-xs font-bold text-danger">
                             {h.cancelado ? "Cancelado" : "Sin lugar"}
                           </span>
                         )}
@@ -118,11 +114,11 @@ export default function AgendaCalendar() {
         )}
       />
 
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16, fontSize: 12, color: palette.inkSoft, fontWeight: 600 }}>
+      <div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold text-ink-soft">
         <Referencia color={palette.mossSoft} label="Hay lugar" />
         <Referencia color={palette.dangerSoft} label="Completo" />
         <Referencia color="#F0EDE3" label="No disponible" />
-        <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Star size={12} color={palette.clay} fill={palette.clay} /> Tu clase</span>
+        <span className="flex items-center gap-1.5"><Star size={12} color={palette.clay} fill={palette.clay} /> Tu clase</span>
       </div>
     </div>
   );
