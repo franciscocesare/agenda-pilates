@@ -329,7 +329,7 @@ export async function cancelarTurno(userId: string, appointmentId: string, esAdm
     // a consumir crédito, así que cancelarlo no debe regalar uno. El
     // crédito nuevo vence a los DIAS_VALIDEZ_CREDITO días desde ahora,
     // independientemente de cuánto le quedara al pago/plan original.
-    if (turno.estado === "CONFIRMADO" && turno.paymentId && !turno.recurringReservationId) {
+    if (correspondeCreditoPorCancelacion(turno)) {
       await crearCreditoPorCancelacion(tx, turno.userId);
     }
   }, { timeout: 15000, maxWait: 10000 });
@@ -402,6 +402,21 @@ async function crearClaseSueltaWalkIn(tx: Tx, userId: string, fecha: Date) {
       estado: "CONFIRMADO",
     },
   });
+}
+
+/**
+ * Si corresponde generarle un crédito a la alumna al cancelar este
+ * turno: alcanza con que el turno estuviera realmente CONFIRMADO (o
+ * sea, que había descontado un crédito) y tuviera un pago asociado.
+ * Aplica igual a una clase suelta que a un día puntual de un plan
+ * mensual — cancelar con aviso (o que cancele la profesora) siempre
+ * devuelve el crédito de ESA clase, sin importar de qué tipo de plan
+ * viene. (Ojo: esto es distinto de modificarDiasPlanMensual, que
+ * cambia el día/horario fijo del plan entero y no genera créditos —
+ * ahí no se "pierde" ninguna clase, solo se reacomoda el calendario.)
+ */
+function correspondeCreditoPorCancelacion(turno: { estado: string; paymentId: string | null }) {
+  return turno.estado === "CONFIRMADO" && !!turno.paymentId;
 }
 
 /**
@@ -548,7 +563,7 @@ export async function cancelarHorarioParaTodos(fechaStr: string, hora: string, m
   for (const turno of afectados) {
     await prisma.$transaction(async (tx) => {
       await tx.appointment.update({ where: { id: turno.id }, data: { estado: "CANCELADO" } });
-      if (turno.estado === "CONFIRMADO" && turno.paymentId && !turno.recurringReservationId) {
+      if (correspondeCreditoPorCancelacion(turno)) {
         await crearCreditoPorCancelacion(tx, turno.userId);
       }
     }, { timeout: 15000, maxWait: 10000 });

@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, LogOut, Mail, Phone, User, CalendarX, Pencil, CalendarDays, KeyRound, UserCircleIcon } from "lucide-react";
+import { X, LogOut, Mail, Phone, User, CalendarX, Pencil, CalendarDays, KeyRound, UserCircleIcon, Sparkles } from "lucide-react";
 import { palette, inputStyle, DIAS_LARGO } from "./ui";
 import { WHATSAPP_NUMBER } from "@/lib/constants";
 import { buildWaLink } from "@/lib/whatsapp";
+import { fetchCreditosDeAlumno } from "@/lib/api/payments";
 import { WhatsAppIcon } from "./Icons/WhatsAppIcon";
 import ConfirmDialog from "./ConfirmDialog";
 import { DiaHoraPicker } from "./DiaHoraPicker";
@@ -72,6 +73,24 @@ export default function ProfilePanel({
   const [guardandoDias, setGuardandoDias] = useState(false);
   const [errorDias, setErrorDias] = useState<string | null>(null);
 
+  // Créditos generados por una cancelación a tiempo (más de 3 horas de
+  // anticipación): no se pierden, quedan disponibles para reasignar.
+  // Se buscan acá mismo (no como prop) para que el aviso aparezca
+  // siempre, sin importar desde qué pantalla se abra este perfil.
+  const [clasesARecuperar, setClasesARecuperar] = useState(0);
+  const [vencimientoCredito, setVencimientoCredito] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (!datos.id) return;
+    fetchCreditosDeAlumno(datos.id).then((creditos) => {
+      console.log("creditos",creditos);
+      const porCancelacion = creditos.filter((c) => c.tipo === "SUELTA" && c.esCredito && c.clasesDisponibles > 0);
+      setClasesARecuperar(porCancelacion.reduce((acc, c) => acc + c.clasesDisponibles, 0));
+      console.log("creditos por cancelacion",porCancelacion);
+      const vencimientos = porCancelacion.map((c) => new Date(c.vencimiento)).sort((a, b) => a.getTime() - b.getTime());
+      setVencimientoCredito(vencimientos[0] ?? null);
+    });
+  }, [datos.id]);
   const abrirModificarDias = () => {
     if (!planMensual) return;
     setDiasNuevos(
@@ -235,6 +254,19 @@ export default function ProfilePanel({
             </div>
           )}
         </div>
+
+        {clasesARecuperar > 0 && (
+          <div className="mb-4 flex items-center gap-2.5 rounded-md2 bg-clay-soft px-3 py-2.5">
+            <Sparkles size={16} color={palette.clayDark} className="shrink-0" />
+            <p className="m-0 text-[12.5px] font-semibold text-clay-dark">
+              {clasesARecuperar === 1 ? "Tiene 1 crédito disponible" : `Tiene ${clasesARecuperar} créditos disponibles`} por cancelación
+              {vencimientoCredito
+                ? ` (vence antes el ${vencimientoCredito.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "UTC" })})`
+                : ""}
+              .
+            </p>
+          </div>
+        )}
 
         {!editando && datos.id && (
           !escribiendoleAOtraPersona && datos.passwordProvisoria ? (

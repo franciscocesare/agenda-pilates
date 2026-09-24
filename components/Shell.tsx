@@ -57,7 +57,6 @@ export default function Shell({ children, session }: { children: ReactNode; sess
             <nav className="hide-on-mobile flex items-center gap-5">
               <a href="/#quienes-somos" className={navLinkClass}>Quiénes somos</a>
               <a href="/#beneficios" className={navLinkClass}>Beneficios</a>
-              <a href="/agenda" className={navLinkClass}>Agenda</a>
               <a href="/#contacto" className={navLinkClass}>Contacto</a>
             </nav>
           )}

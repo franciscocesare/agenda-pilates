@@ -5,12 +5,15 @@ import { ChevronDown, Wallet, X, MessageCircle, CalendarX, Users, Search, Mail, 
 import { palette, card, inputStyle } from "../ui";
 import { buildWaLink, mensajeRecordatorioPago } from "@/lib/whatsapp";
 import { patchReservationEstado } from "@/lib/api/reservations";
+import { fetchCreditosDeAlumno } from "@/lib/api/payments";
 import { useBuscarAlumnas } from "@/lib/hooks/useBuscarAlumnas";
 import type { Alumno } from "@/lib/types";
 import { BRAND } from "@/lib/brand";
 import { WhatsAppIcon } from "../Icons/WhatsAppIcon";
 import AlumnaChip from "../AlumnaChip";
 import ProfilePanel from "../ProfilePanel";
+
+type PlanMensualInfo = { paymentId: string; nombre: string; clasesPorSemana: number; patrones: { diaSemana: number; hora: string }[] };
 
 type Pendiente = { id: string; fecha: string; hora: string; user: { id: string; nombre: string; apellido: string; telefono: string } };
 type AlumnaHorario = { id: string; nombre: string; nombreCompleto: string; pendiente: boolean };
@@ -76,6 +79,26 @@ export default function AdminDashboard() {
   const [qContacto, setQContacto] = useState("");
   const resultadosContacto = useBuscarAlumnas(qContacto);
   const [perfilAlumno, setPerfilAlumno] = useState<Alumno | null>(null);
+  const [planMensualPerfil, setPlanMensualPerfil] = useState<PlanMensualInfo | undefined>(undefined);
+
+  // Igual que en "Reservas" y en "Asignar turno": para mostrar el
+  // resumen de días del plan mensual en el perfil hay que traer los
+  // créditos de la alumna, que no vienen en el resultado de la
+  // búsqueda por nombre/email/teléfono.
+  const abrirPerfilAlumno = async (a: Alumno) => {
+    setPerfilAlumno(a);
+    setPlanMensualPerfil(undefined);
+    const creditos = await fetchCreditosDeAlumno(a.id);
+    const planMensual = creditos.find((c) => c.tipo === "MENSUAL" && c.patrones.length > 0);
+    if (planMensual) {
+      setPlanMensualPerfil({
+        paymentId: planMensual.id,
+        nombre: planMensual.nombre,
+        clasesPorSemana: planMensual.clasesPorSemana ?? 1,
+        patrones: planMensual.patrones,
+      });
+    }
+  };
 
   const toggle = (clave: keyof typeof abiertas) => setAbiertas((prev) => ({ ...prev, [clave]: !prev[clave] }));
 
@@ -303,7 +326,7 @@ export default function AdminDashboard() {
               <p className="m-0 mb-1.5 flex items-center gap-1.5 font-semibold">
                 {a.nombre} {a.apellido}
                 <button
-                  onClick={() => setPerfilAlumno(a)}
+                  onClick={() => abrirPerfilAlumno(a)}
                   title={`Ver perfil de ${a.nombre} ${a.apellido}`}
                   className="flex items-center border-none bg-transparent p-0 text-moss cursor-pointer"
                 >
@@ -334,12 +357,13 @@ export default function AdminDashboard() {
             sesion={perfilAlumno}
             contactoNumero={perfilAlumno.telefono}
             mostrarLogout={false}
+            planMensual={planMensualPerfil}
             onClose={() => setPerfilAlumno(null)}
             onActualizado={(datos) =>
               setPerfilAlumno((prev) => (prev ? { ...prev, ...datos } : prev))
             }
-            // onClasesCanceladas={() => {}}
-            // onDiasModificados={() => {}}
+            onClasesCanceladas={() => { setPerfilAlumno(null); setPlanMensualPerfil(undefined); }}
+            onDiasModificados={() => abrirPerfilAlumno(perfilAlumno)}
           />
         )}
       </Seccion>

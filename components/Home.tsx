@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRight, MapPin, Target, Award, Users2, CalendarCheck,
+  ArrowRight, Target, Award, Users2, CalendarCheck,
   CalendarDaysIcon,
   UserCheck2,
   UserCircle,
@@ -9,9 +9,9 @@ import {
 import { palette, btnPrimary, card } from "./ui";
 import { buildWaLink } from "@/lib/whatsapp";
 import { BRAND } from "@/lib/brand";
-import { InstagramIcon } from "./Icons/InstagramIcon";
-import { WhatsAppIcon } from "./Icons/WhatsAppIcon";
+import Gallery from "./Gallery";
 import Reveal from "./Reveal";
+import Footer from "./Footer";
 
 const waHref = buildWaLink(undefined, `¡Hola! Quiero consultar por las clases de ${BRAND.nombre} 🌿`);
 
@@ -36,14 +36,14 @@ const BENEFICIOS = [
   {
     icon: Target,
     titulo: "La secuencia original",
-    texto: `Los ejercicios se hacen en el orden y la progresión que diseñó Joseph Pilates hace casi un siglo — nada de rutinas armadas al azar clase a clase.
-    Aparatos fieles al diseño original, cada resorte y cada palanca tiene un propósito exacto dentro del método.`,
+    texto: `Los ejercicios se hacen en el orden y la progresión que diseñó Joseph Pilates con
+    aparatos fieles al diseño original.`,
   },
   {
     icon: Award,
     titulo: "Progresión real",
-    texto: `Cada alumna avanza dentro de niveles pensados para el cuerpo completo, no clases sueltas sin relación entre sí. 
-    El foco está en la precisión del movimiento y la respiración (la \"contrology\")`,
+    texto: `Cada alumna avanza dentro de niveles pensados para el cuerpo completo. 
+    El foco está en la precisión del movimiento y la respiración.`,
   },
   {
     icon: Users2,
@@ -55,8 +55,8 @@ const BENEFICIOS = [
 
 const PASOS = [
   { icon: CalendarDaysIcon, titulo: "Ves la agenda y elegis día", texto: "En el horario que te sirve, si hay lugar,  un boton te lleva a pedir ese turno." },
-  { icon: CalendarCheck, titulo: "La profesora confirma día y horario", texto: "Administración confirma lugar y guarda el día y la hora para vos." },
-  { icon: UserCircle, titulo: "Login", texto: "Iniciás sesión cuando quieras para ver tus próximos turnos, pedir alguno o cancelar si sabes que no vas a poder asistir." },
+  { icon: CalendarCheck, titulo: "La profesora confirma día y horario", texto: "Vos mirás la disponibilidad en la Agenda, administración confirma lugar y fija el día y la hora." },
+  { icon: UserCircle, titulo: "Login", texto: "Iniciás sesión cuando quieras para ver tus próximos turnos, o cancelar con más de 3 horas de anticipación sin perder el crédito." },
   { icon: UserCheck2, titulo: "Vas a tu clase", texto: "Las clases se realizan en el orden y la progresión que diseñó Joseph Pilates." },
 ];
 
@@ -121,7 +121,7 @@ export default function Home() {
             <div>
               <p className="m-0 mb-2.5 text-[13px] font-extrabold uppercase tracking-[1.4px] text-moss">Quiénes somos</p>
               <Reveal delay={80}>
-                <h2 className="m-0 font-display text-[32px] font-semibold text-moss-dark">
+                <h2 className="m-0 mb-[18px] font-display text-[32px] font-semibold text-moss-dark">
                   Un estudio chico, pensado para hacer las cosas bien.
                 </h2>
               </Reveal>
@@ -133,7 +133,7 @@ export default function Home() {
                   Mi nombre es Mariana Olivares y soy la instructora a cargo, me forme en la UNA en Buenos Aires y en el estudio de Joseph Pilates en Nueva York. Llevo más de 10 años enseñando el método clásico, y me apasiona que cada alumna pueda progresar a su ritmo, con seguridad y precisión.
                 </p>
                 <p className="m-0 text-base leading-[1.7] text-ink-soft">
-                  No damos clases masivas ni mezclamos disciplinas. Cada alumna tiene su progresión, su nivel y su seguimiento — la profesora conoce tu cuerpo, no solo tu nombre.
+                  No damos clases masivas ni mezclamos disciplinas. Cada alumna tiene su progresión, su nivel y su seguimiento — la profesora conoce tu cuerpo, no solo tu nombre en una lista.
                 </p>
               </Reveal>
             </div>
@@ -141,14 +141,19 @@ export default function Home() {
         </Reveal>
       </section>
 
+      {/* ---------- GALERÍA ---------- */}
+      <Reveal>
+        <section className="py-6 md:py-10">
+          <Gallery />
+        </section>
+      </Reveal>
+
       {/* ---------- BENEFICIOS ---------- */}
       <section id="beneficios" className="rounded-[32px] bg-card px-5 py-11 md:px-6 md:py-16">
         <Reveal>
           <div className="mx-auto mb-11 max-w-[620px] text-center">
             <Reveal>
-    <span className="mb-[18px] inline-block rounded-full bg-clay-soft px-3 py-1.5 text-xs font-extrabold uppercase tracking-[1.6px] text-clay-dark">
-             ¿Por qué Clásico?
-          </span>
+              <p className="m-0 mb-2.5 text-[13px] font-extrabold uppercase tracking-[1.4px] text-moss">Por qué clásico</p>
               <h2 className="m-0 mb-3.5 font-display text-[32px] font-semibold text-moss-dark">
                 El pilates clásico no es una variante más.
               </h2>
@@ -185,18 +190,18 @@ export default function Home() {
           <div className="mx-auto mb-11 max-w-[620px] text-center">
             <span className="mb-[18px] inline-block rounded-full bg-clay-soft px-3 py-1.5 text-xs font-extrabold uppercase tracking-[1.6px] text-clay-dark">
               Cómo funciona
-          </span>
+            </span>
             <h2 className="m-0 mb-3.5 font-display text-[32px] font-semibold text-moss-dark">
               Vos mirás la disponibilidad. Nosotras coordinamos el turno.
             </h2>
             <p className="m-0 text-base leading-[1.6] text-ink-soft">
-             Aunque no seas alumno, podes ver la agenda y que dia podés participar.<br /> <strong>¿Hay un horario que encaja con vos?, <br /> podés pedir tu lugar!.</strong> <br />
+              Aunque no seas alumno, podes ver la agenda y que dia podés participar.<br /> <strong>¿Hay un horario que encaja con vos?, <br /> podés pedir tu lugar!.</strong> <br />
               Y si ya sos alumno, podés iniciar sesión para ver tus próximas clases, editar datos, o cancelar con más de 3 horas de anticipación sin perder el crédito. <br />
               El pago es lo único que no se hace desde acá, lo arreglamos después.
             </p>
           </div>
         </Reveal>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {PASOS.map((p, i) => (
             <Reveal key={p.titulo} delay={i * 90}>
               <div className="text-center bg-card hover-lift rounded-[28px] px-6 py-8">
@@ -226,40 +231,7 @@ export default function Home() {
       </section>
 
       {/* ---------- CONTACTO y FOOTER---------- */}
-      <Reveal>
-        <footer id="contacto" className="px-5 pb-0 pt-11 md:px-6 md:pt-16">
-          <div
-            className="footer-card hover-lift relative overflow-hidden rounded-lg text-white"
-            style={{ background: `${palette.moss}E6` }}
-          >
-            <svg viewBox="0 0 400 60" className="absolute left-0 top-0 h-[60px] w-full opacity-40" preserveAspectRatio="none" aria-hidden="true">
-              <path d="M0 30 Q100 5 200 30 T400 30" stroke="rgba(255, 255, 255, 0.22)" strokeWidth="1" fill="none" />
-            </svg>
-            {/* Marca */}
-            <div className="mb-3 flex flex-col items-center gap-1">
-              <span className="font-display text-[21px] font-bold tracking-wide">{BRAND.nombreCorto}</span>
-              <span className="font-display text-sm italic text-bg">Pilates, método clásico</span>
-            </div>
-            <div className="relative flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.22] pt-[18px]">
-              <a href={waHref} target="_blank" rel="noopener noreferrer" className="btn-anim inline-flex items-center gap-1 text-sm text-bg no-underline">
-                <WhatsAppIcon size={16} /> {BRAND.telefonoDisplay}
-              </a>
-              <a href={BRAND.instagramUrl} className="btn-anim inline-flex items-center gap-1 text-sm text-bg no-underline" target="_blank" rel="noopener noreferrer">
-                <InstagramIcon size={16} fill={palette.claySoft} /> {BRAND.instagramHandle}
-              </a>
-              <a
-                className="link-underline flex items-start gap-1 text-sm leading-relaxed text-bg no-underline"
-                href={BRAND.googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <MapPin size={16} color={palette.bg} className="mt-0.5 shrink-0" />
-                {BRAND.direccion}.
-              </a>
-            </div>
-          </div>
-        </footer>
-      </Reveal>
+      <Footer />
       <p className="text-center text-xs text-ink-soft">© {new Date().getFullYear()} {BRAND.nombre} - {BRAND.region} - {BRAND.pais}</p>
     </div>
   );
