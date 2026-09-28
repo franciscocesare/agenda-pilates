@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { logAndWrap } from "@/lib/errors";
-import { toDateOnly } from "@/lib/booking";
+import { toDateOnly, marcarClasesPasadasComoCompletadas } from "@/lib/booking";
 import { CUPO_DEFAULT, HORARIOS_BASE } from "@/lib/constants";
 
 // GET /api/admin/stats -> todo lo que necesita el inicio del admin en
@@ -12,6 +12,7 @@ import { CUPO_DEFAULT, HORARIOS_BASE } from "@/lib/constants";
 export async function GET() {
   try {
     await requireAdmin();
+    await marcarClasesPasadasComoCompletadas();
     const hoy = toDateOnly(new Date());
 
     // Resto de la semana en curso: de hoy al próximo sábado. Si hoy es
@@ -81,7 +82,7 @@ export async function GET() {
         select: { fecha: true, hora: true },
       }),
       prisma.appointment.findMany({
-        where: { fecha: hoy, estado: { in: ["CONFIRMADO", "PENDIENTE_PAGO"] } },
+        where: { fecha: hoy, estado: { in: ["CONFIRMADO", "PENDIENTE_PAGO", "COMPLETADO", "AUSENTE", "CANCELADO"] } },
         select: {
           hora: true,
           estado: true,
@@ -168,6 +169,7 @@ export async function GET() {
         nombre: string;
         nombreCompleto: string;
         pendiente: boolean;
+        cancelado: boolean;
       }[]
     >();
     for (const r of appointmentsHoyConNombre) {
@@ -177,6 +179,7 @@ export async function GET() {
         nombre: `${r.user.nombre} ${r.user.apellido[0]}.`,
         nombreCompleto: `${r.user.nombre} ${r.user.apellido}`,
         pendiente: r.estado === "PENDIENTE_PAGO",
+        cancelado: r.estado === "CANCELADO",
       });
       alumnasPorHora.set(r.hora, lista);
     }

@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { reservarComoAdmin, reservarComoAdminConCredito, reservarComoAdminPendientePago, reservarPlanMensualCompleto } from "@/lib/booking";
+import { reservarComoAdmin, reservarComoAdminConCredito, reservarComoAdminPendientePago, reservarPlanMensualCompleto, marcarClasesPasadasComoCompletadas } from "@/lib/booking";
 import { logAndWrap } from "@/lib/errors";
 
 // GET /api/admin/reservations?q=&fecha=&hora=&estado=
 export async function GET(req: NextRequest) {
   try {
     await requireAdmin();
+    await marcarClasesPasadasComoCompletadas();
     const q = req.nextUrl.searchParams.get("q") ?? undefined;
     const userId = req.nextUrl.searchParams.get("userId") ?? undefined;
     const fecha = req.nextUrl.searchParams.get("fecha") ?? undefined;

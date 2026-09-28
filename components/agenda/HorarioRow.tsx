@@ -4,7 +4,9 @@ import { ReactNode } from "react";
 export type HorarioDia = {
   hora: string; cancelado: boolean; used: number; total: number;
   /** Solo viene del endpoint de admin (/api/admin/calendar-day), nunca del público. */
-  alumnas?: { id: string; nombre: string; nombreCompleto: string; pendiente: boolean }[];
+  alumnas?: { id: string; nombre: string; nombreCompleto: string; pendiente: boolean; cancelado?: boolean }[];
+  /** Solo viene del endpoint de admin: si esta hora ya pasó (no tiene sentido ofrecer asignar un turno ahí). */
+  pasado?: boolean;
 };
 /**
  * Fila de un horario dentro del panel desplegable de un día: la hora a

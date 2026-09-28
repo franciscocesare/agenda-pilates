@@ -69,6 +69,7 @@ export default function AdminAgenda() {
           diaExpandido={diaSel}
           onToggleDay={onToggleDay}
           permitirTodosLosEstados
+          permitirDiasPasados
           refreshKey={refreshKey}
           renderPanel={(dia) => (
             <div>
@@ -92,7 +93,7 @@ export default function AdminAgenda() {
                 {horarios?.map((h) => {
                   const quedan = h.total - h.used;
                   const disponible =
-                    !h.cancelado && dia.status !== "bloqueado" && quedan > 0;
+                    !h.cancelado && !h.pasado && dia.status !== "bloqueado" && quedan > 0;
                   const alumnas = h.alumnas ?? [];
                   return (
                     <HorarioRow
@@ -121,7 +122,9 @@ export default function AdminAgenda() {
                         <span className={`whitespace-nowrap text-xs font-bold ${disponible ? "text-moss" : "text-ink-soft"}`}>
                           {h.cancelado
                             ? "Cancelado"
-                            : `${quedan} libre${quedan === 1 ? "" : "s"}`}
+                            : h.pasado
+                              ? "Ya pasó"
+                              : `${quedan} libre${quedan === 1 ? "" : "s"}`}
                         </span>
                         {disponible && (
                           <button

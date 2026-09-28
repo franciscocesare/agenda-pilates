@@ -14,6 +14,7 @@ import MonthlyDaysPicker from "./manual-booking/MonthlyDaysPicker";
 import ConfirmPlanNuevoDialog from "./manual-booking/ConfirmPlanNuevoDialog";
 import ConfirmPagoMensualDialog from "./manual-booking/ConfirmPagoMensualDialog";
 import ConfirmPagoDialog from "./manual-booking/ConfirmPagoDialog";
+import ConfirmUsoCreditoDialog from "./manual-booking/ConfirmUsoCreditoDialog";
 import type { Usuario, Credito, PlanCatalogo, Modo } from "./manual-booking/types";
 
 export default function ManualBookingForm({
@@ -42,6 +43,7 @@ export default function ManualBookingForm({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmandoPago, setConfirmandoPago] = useState(false);
+  const [confirmandoUsoCredito, setConfirmandoUsoCredito] = useState(false);
   const [planes, setPlanes] = useState<PlanCatalogo[]>([]);
   const [vendiendo, setVendiendo] = useState(false);
   const [planTipoId, setPlanTipoId] = useState("");
@@ -187,6 +189,7 @@ export default function ManualBookingForm({
       return;
     }
     setConfirmandoPago(false);
+    setConfirmandoUsoCredito(false);
     onCreated();
   };
 
@@ -277,11 +280,12 @@ export default function ManualBookingForm({
       resolverYAsignarMensual();
       return;
     }
-    // Si ya tiene un crédito por cancelación, no hay nada que cobrar:
-    // se descuenta directo. Para "clase suelta" pagada sí pedimos
+    // Si ya tiene un crédito por cancelación, se avisa antes de
+    // gastarlo (no hay nada que cobrar, pero igual queremos que quede
+    // claro que se está usando). Para "clase suelta" pagada sí pedimos
     // confirmar el cobro antes de guardar, para no descontarla sin cobrar.
     if (modo === "credito" && totalCreditosPorCancelacion > 0) {
-      crear(true);
+      setConfirmandoUsoCredito(true);
       return;
     }
     if (modo === "credito") {
@@ -464,6 +468,18 @@ export default function ManualBookingForm({
           onConfirmarPago={() => crear(true)}
           onAvisarPorWhatsapp={avisarPorWhatsapp}
           onClose={() => setConfirmandoPago(false)}
+        />
+      )}
+
+      {confirmandoUsoCredito && usuario && (
+        <ConfirmUsoCreditoDialog
+          usuario={usuario}
+          fecha={fecha}
+          hora={hora}
+          totalCreditos={totalCreditosPorCancelacion}
+          loading={loading}
+          onConfirmar={() => crear(true)}
+          onClose={() => setConfirmandoUsoCredito(false)}
         />
       )}
     </div>

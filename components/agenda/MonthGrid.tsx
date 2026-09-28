@@ -35,6 +35,8 @@ type Props = {
   renderPanel: (dia: DiaCalendario) => ReactNode;
   /** Si es false, los días "completo"/"bloqueado"/"cerrado" no se pueden abrir. Por defecto se puede abrir cualquier día que no sea pasado. */
   permitirTodosLosEstados?: boolean;
+  /** Si es true, los días anteriores a hoy también se pueden abrir (ej. el admin revisando quién asistió). Por defecto los días pasados están bloqueados. */
+  permitirDiasPasados?: boolean;
   /** Fechas a marcar con una estrella (ej. "mis clases" del alumno logueado). */
   fechasDestacadas?: Set<string>;
   apiUrl?: string;
@@ -43,7 +45,7 @@ type Props = {
 };
 
 export default function MonthGrid({
-  diaExpandido, onToggleDay, renderPanel, permitirTodosLosEstados = true,
+  diaExpandido, onToggleDay, renderPanel, permitirTodosLosEstados = true, permitirDiasPasados = false,
   fechasDestacadas, apiUrl = "/api/calendar", refreshKey,
 }: Props) {
   const hoy = new Date();
@@ -116,7 +118,7 @@ export default function MonthGrid({
                   const esDestacado = fechasDestacadas?.has(key) ?? false;
                   const status = info?.status ?? (esPasado ? "pasado" : "cargando");
                   const esEstadoAbrible = permitirTodosLosEstados ? status !== "cargando" : status === "disponible" || status === "completo";
-                  const expandible = delMesActual && !esPasado && esEstadoAbrible && !loading;
+                  const expandible = delMesActual && (!esPasado || permitirDiasPasados) && esEstadoAbrible && !loading;
                   const estaExpandido = diaExpandido?.fecha === key;
 
                   const estado = delMesActual && !esPasado ? ESTADO_CLASES[status] ?? ESTADO_DEFAULT : ESTADO_DEFAULT;

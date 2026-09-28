@@ -21,6 +21,48 @@ const TX_OPTIONS = {
 };
 
 /**
+ * Si el horario de una fecha puntual ya pasó (la combinación
+ * fecha+hora quedó antes que este instante). Usa la misma convención
+ * que la validación de las 3 horas de anticipación al cancelar: arma
+ * el Date pegando la fecha (día calendario en UTC) con la hora tal
+ * cual está guardada, sin sufijo de huso horario.
+ */
+export function horarioYaPaso(fecha: Date, hora: string): boolean {
+  const inicio = new Date(`${fecha.toISOString().slice(0, 10)}T${hora}:00`);
+  return inicio.getTime() < Date.now();
+}
+
+/**
+ * Las clases que ya pasaron su fecha/hora y seguían en CONFIRMADO
+ * (nadie las canceló ni las marcó ausente/completada a mano) se dan
+ * por presentes solas. No hace falta ningún proceso en segundo plano:
+ * se corre al vuelo cada vez que se listan turnos, así el estado
+ * siempre está al día para quien lo esté mirando en ese momento.
+ */
+export async function marcarClasesPasadasComoCompletadas() {
+  const hoy = toDateOnly(new Date());
+
+  // Cualquier día anterior a hoy: se completan todas de una, no hace
+  // falta mirar la hora puntual.
+  await prisma.appointment.updateMany({
+    where: { estado: "CONFIRMADO", fecha: { lt: hoy } },
+    data: { estado: "COMPLETADO" },
+  });
+
+  // Las de HOY hay que revisarlas una por una: "hora" es un string
+  // ("09:00") y no se puede comparar directo contra la hora actual en
+  // la consulta a la base.
+  const deHoy = await prisma.appointment.findMany({
+    where: { estado: "CONFIRMADO", fecha: hoy },
+    select: { id: true, hora: true },
+  });
+  const idsPasados = deHoy.filter((t) => horarioYaPaso(hoy, t.hora)).map((t) => t.id);
+  if (idsPasados.length > 0) {
+    await prisma.appointment.updateMany({ where: { id: { in: idsPasados } }, data: { estado: "COMPLETADO" } });
+  }
+}
+
+/**
  * Convierte una fecha (Date u string "YYYY-MM-DD") a las 00:00 UTC del
  * día calendario correspondiente, sin pasar nunca por la zona horaria
  * local. Evita el bug clásico de JS: un string tipo "2026-09-07" se

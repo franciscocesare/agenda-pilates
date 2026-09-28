@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logAndWrap } from "@/lib/errors";
-import { toDateOnly } from "@/lib/booking";
+import { toDateOnly, horarioYaPaso } from "@/lib/booking";
 import { HORARIOS_BASE, CUPO_DEFAULT } from "@/lib/constants";
 
 // GET /api/calendar/day?fecha=YYYY-MM-DD
@@ -32,12 +32,16 @@ export async function GET(req: NextRequest) {
 
     const horarios = HORARIOS_BASE.filter((h) =>
       schedules.some((s: { horaInicio: string; horaFin: string }) => h >= s.horaInicio && h < s.horaFin)
-    ).map((hora) => ({
-      hora,
-      cancelado: canceladas.has(hora),
-      used: usadosPorHora.get(hora) ?? 0,
-      total: CUPO_DEFAULT,
-    }));
+    )
+      // Una alumna no puede pedir un horario que ya pasó, aunque sea
+      // más tarde el mismo día — directamente no se lo mostramos.
+      .filter((h) => !horarioYaPaso(fecha, h))
+      .map((hora) => ({
+        hora,
+        cancelado: canceladas.has(hora),
+        used: usadosPorHora.get(hora) ?? 0,
+        total: CUPO_DEFAULT,
+      }));
 
     return NextResponse.json({ fecha: fechaStr, horarios });
   } catch (err) {

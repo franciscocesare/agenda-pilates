@@ -16,7 +16,7 @@ import ProfilePanel from "../ProfilePanel";
 type PlanMensualInfo = { paymentId: string; nombre: string; clasesPorSemana: number; patrones: { diaSemana: number; hora: string }[] };
 
 type Pendiente = { id: string; fecha: string; hora: string; user: { id: string; nombre: string; apellido: string; telefono: string } };
-type AlumnaHorario = { id: string; nombre: string; nombreCompleto: string; pendiente: boolean };
+type AlumnaHorario = { id: string; nombre: string; nombreCompleto: string; pendiente: boolean; cancelado?: boolean };
 type HorarioHoy = { hora: string; cancelado: boolean; alumnas: AlumnaHorario[] };
 type DiaSemana = { fecha: string; bloqueado: boolean; horariosLibres: { hora: string; quedan: number }[] };
 type Inicio = {
