@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logAndWrap } from "@/lib/errors";
-import { toDateOnly } from "@/lib/booking";
+import { toDateOnly, hoyEnElEstudio } from "@/lib/booking";
 import { CUPO_DEFAULT, HORARIOS_BASE } from "@/lib/constants";
 
 // GET /api/calendar?desde=YYYY-MM-DD&dias=42
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   try {
     const desdeParam = req.nextUrl.searchParams.get("desde");
     const dias = Math.min(Number(req.nextUrl.searchParams.get("dias") ?? 42), 62);
-    const desde = desdeParam ? toDateOnly(desdeParam) : toDateOnly(new Date());
+    const desde = desdeParam ? toDateOnly(desdeParam) : hoyEnElEstudio();
 
     const hasta = new Date(desde);
     hasta.setUTCDate(hasta.getUTCDate() + dias);

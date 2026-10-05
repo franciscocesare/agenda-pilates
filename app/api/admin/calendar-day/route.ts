@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { logAndWrap } from "@/lib/errors";
-import { toDateOnly, horarioYaPaso, marcarClasesPasadasComoCompletadas } from "@/lib/booking";
+import { toDateOnly, horarioYaPaso, hoyEnElEstudio, marcarClasesPasadasComoCompletadas, renovarPlanesMensuales, enUltimaSemanaDelMes } from "@/lib/booking";
 import { HORARIOS_BASE, CUPO_DEFAULT } from "@/lib/constants";
 
 // GET /api/admin/calendar-day?fecha=YYYY-MM-DD
@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
     // admin ya refleja quién quedó "presente" sin que nadie la haya
     // tocado a mano.
     await marcarClasesPasadasComoCompletadas();
+    if (enUltimaSemanaDelMes(hoyEnElEstudio())) await renovarPlanesMensuales();
 
     const [schedules, blockedSlots, reservas] = await Promise.all([
       prisma.schedule.findMany({ where: { diaSemana, activo: true } }),

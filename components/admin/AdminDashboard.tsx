@@ -311,7 +311,7 @@ export default function AdminDashboard() {
           <Search size={16} color={palette.inkSoft} className="absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             className={`${inputStyle} pl-9`}
-            placeholder="Buscar por nombre, email o teléfono…"
+            placeholder="Buscar Alumno o crear uno"
             value={qContacto}
             onChange={(e) => setQContacto(e.target.value)}
           />
@@ -381,10 +381,31 @@ export default function AdminDashboard() {
             className={`${inputStyle} mb-2.5 h-auto resize-y font-mono text-[12.5px]`}
           />
           {alumnasAImportar.length > 0 && (
+            <div className="mb-2.5 max-h-[240px] overflow-y-auto rounded-md2 border border-line">
+              {alumnasAImportar.map((a, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 text-[12.5px] ${i > 0 ? "border-t border-line" : ""} ${
+                    a.telefono ? "" : "bg-danger-soft"
+                  }`}
+                >
+                  <div>
+                    <span className="font-bold">{a.nombre} {a.apellido}</span>{" "}
+                    <span className="text-ink-soft">
+                      {a.telefono || "sin teléfono"}
+                      {a.email ? ` · ${a.email}` : ""}
+                    </span>
+                  </div>
+                  {!a.telefono && <span className="whitespace-nowrap text-xs font-bold text-danger">no se importa</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          {alumnasAImportar.length > 0 && (
             <p className="m-0 mb-2.5 text-xs text-ink-soft">
-              Detecté {alumnasAImportar.length} línea{alumnasAImportar.length === 1 ? "" : "s"}
+              {alumnasAImportar.length} línea{alumnasAImportar.length === 1 ? "" : "s"} detectada{alumnasAImportar.length === 1 ? "" : "s"}
               {alumnasSinTelefono.length > 0 && (
-                <> — <span className="font-bold text-danger">{alumnasSinTelefono.length} sin teléfono, no se van a importar</span>: {alumnasSinTelefono.map((a) => `${a.nombre} ${a.apellido}`.trim()).join(", ")}</>
+                <> — <span className="font-bold text-danger">{alumnasSinTelefono.length} sin teléfono, no se van a importar</span></>
               )}
             </p>
           )}

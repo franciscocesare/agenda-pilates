@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { logAndWrap, Errores } from "@/lib/errors";
-import { toDateOnly } from "@/lib/booking";
+import { hoyEnElEstudio } from "@/lib/booking";
 
 // GET /api/admin/payments?userId=...
 // Créditos/planes vigentes de un alumno puntual, para que la profesora
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const userId = req.nextUrl.searchParams.get("userId");
     if (!userId) return NextResponse.json({ error: "Falta el alumno." }, { status: 400 });
 
-    const hoy = toDateOnly(new Date());
+    const hoy = hoyEnElEstudio();
 
     const payments = await prisma.payment.findMany({
       where: { userId, estado: "CONFIRMADO", periodoFin: { gte: hoy } },
@@ -27,7 +27,6 @@ export async function GET(req: NextRequest) {
       payments.map((p) => ({
         id: p.id,
         nombre: p.planType.nombre,
-        planTypeId: p.planTypeId,
         tipo: p.planType.tipo,
         clasesDisponibles: p.clasesDisponibles,
         clasesPorSemana: p.planType.clasesPorSemana,
@@ -61,7 +60,7 @@ export async function POST(req: NextRequest) {
     if (!alumno) throw Errores.alumnoNoEncontrado();
     if (!plan || !plan.activo) return NextResponse.json({ error: "Ese plan ya no está disponible." }, { status: 404 });
 
-    const inicio = toDateOnly(new Date());
+    const inicio = hoyEnElEstudio();
     const fin = new Date(inicio);
     fin.setUTCDate(fin.getUTCDate() + plan.duracionDias);
 

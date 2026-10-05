@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { X, Sparkles } from "lucide-react";
-import { palette, card, btnPrimary, inputStyle } from "../ui";
+import { palette, card, btnPrimary, inputStyle, DIAS_LARGO } from "../ui";
 import { buildWaLink } from "@/lib/whatsapp";
 import { fetchCreditosDeAlumno } from "@/lib/api/payments";
 import { Field } from "../Field";
@@ -310,6 +310,22 @@ export default function ManualBookingForm({
     crear(false);
   };
 
+  // A diferencia de avisarPorWhatsapp (clase suelta), acá no se llega
+  // a crear nada todavía — el plan mensual recién se genera cuando el
+  // admin confirma que ya se pagó. Este botón solo avisa por
+  // WhatsApp con los días que se le iban a fijar, para que la alumna
+  // sepa qué está reservando y cuánto le queda pendiente.
+  const avisarPlanMensualPorWhatsapp = () => {
+    if (!usuario) return;
+    const dias = diasSeleccionados
+      .filter((d) => d.diaSemana !== null && d.hora)
+      .map((d) => `${DIAS_LARGO[d.diaSemana as number]} ${d.hora}`)
+      .join(", ");
+    const texto = `¡Hola ${usuario.nombre}! Te estoy por reservar ${planElegidoNombre} (${dias}). Cuando puedas pasame el pago del plan para confirmarte los días 🌿`;
+    window.open(buildWaLink(usuario.telefono, texto), "_blank");
+    setConfirmandoPagoMensual(false);
+  };
+
   const puedeCrear =
     !!usuario &&
     ((modo !== "mensual" && !!fecha && !!hora) ||
@@ -455,6 +471,7 @@ export default function ManualBookingForm({
           vendiendo={vendiendo}
           error={error}
           onConfirm={venderYAsignarMensualConfirmado}
+          onAvisarPorWhatsapp={avisarPlanMensualPorWhatsapp}
           onClose={() => setConfirmandoPagoMensual(false)}
         />
       )}

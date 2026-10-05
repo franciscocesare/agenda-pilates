@@ -89,7 +89,7 @@ export default function StudentPicker({
         <Search size={16} color={palette.inkSoft} className="absolute left-3 top-[13px]" />
         <input
           className={`${inputStyle} pl-9`}
-          placeholder="Buscar por nombre, email o teléfono"
+          placeholder="Buscar o crear alumno"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />

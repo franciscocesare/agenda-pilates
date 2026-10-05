@@ -20,16 +20,56 @@ const TX_OPTIONS = {
   maxWait: 10000,
 };
 
+// El estudio siempre opera en horario de Argentina (UTC-3 fijo todo el
+// año, sin horario de verano desde 2009). Se deja como constante, no
+// como un cálculo con Intl/timeZone, para no depender de que el
+// entorno donde corre el servidor tenga los datos de husos horarios
+// completos — con la constante fija alcanza y sobra para un solo país.
+const OFFSET_ESTUDIO = "-03:00";
+
+/**
+ * El instante real (UTC) que representa una fecha (día calendario) +
+ * una hora de pared del estudio ("09:00"), asumiendo siempre el huso
+ * horario de Argentina — sin importar en qué huso horario esté
+ * corriendo el servidor. Si a esto se le arma el Date pegando el
+ * string sin indicar el huso ("...T09:00:00"), JS lo interpreta con
+ * el huso horario LOCAL del proceso que lo ejecuta: en un servidor
+ * corriendo en UTC (lo más común en hosting), "09:00" pasa a
+ * significar las 9 de la mañana en Londres, no en Argentina — un
+ * desfasaje de 3 horas. Poniendo el offset a mano se evita depender
+ * de eso.
+ */
+function instanteDelHorario(fecha: Date, hora: string): Date {
+  return new Date(`${fecha.toISOString().slice(0, 10)}T${hora}:00${OFFSET_ESTUDIO}`);
+}
+
+/**
+ * Qué día calendario es HOY, pero en el huso horario del estudio
+ * (Argentina), no en el del servidor. `hoyEnElEstudio()` a
+ * secas está mal para esto: lee los componentes de fecha en UTC, y
+ * durante las últimas horas de la noche en Argentina (21hs a
+ * 23:59, horario del estudio) UTC ya pasó a ser el día siguiente —
+ * el servidor pensaría que ya es mañana cuando en Argentina todavía
+ * es hoy a la noche. Acá se corrige restándole el offset del
+ * estudio al instante actual antes de leer sus componentes de
+ * fecha, así siempre da el día calendario real en Argentina.
+ */
+export function hoyEnElEstudio(): Date {
+  const ahoraEnElEstudio = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  return new Date(Date.UTC(
+    ahoraEnElEstudio.getUTCFullYear(),
+    ahoraEnElEstudio.getUTCMonth(),
+    ahoraEnElEstudio.getUTCDate(),
+  ));
+}
+
 /**
  * Si el horario de una fecha puntual ya pasó (la combinación
- * fecha+hora quedó antes que este instante). Usa la misma convención
- * que la validación de las 3 horas de anticipación al cancelar: arma
- * el Date pegando la fecha (día calendario en UTC) con la hora tal
- * cual está guardada, sin sufijo de huso horario.
+ * fecha+hora quedó antes que este instante), en el huso horario del
+ * estudio.
  */
 export function horarioYaPaso(fecha: Date, hora: string): boolean {
-  const inicio = new Date(`${fecha.toISOString().slice(0, 10)}T${hora}:00`);
-  return inicio.getTime() < Date.now();
+  return instanteDelHorario(fecha, hora).getTime() < Date.now();
 }
 
 /**
@@ -40,7 +80,7 @@ export function horarioYaPaso(fecha: Date, hora: string): boolean {
  * siempre está al día para quien lo esté mirando en ese momento.
  */
 export async function marcarClasesPasadasComoCompletadas() {
-  const hoy = toDateOnly(new Date());
+  const hoy = hoyEnElEstudio();
 
   // Cualquier día anterior a hoy: se completan todas de una, no hace
   // falta mirar la hora puntual.
@@ -121,7 +161,7 @@ async function reservarEnTransaccion(
   params: { userId: string; fecha: Date; hora: string; paymentId?: string; recurringReservationId?: string; estado?: "CONFIRMADO" | "PENDIENTE_PAGO" }
 ) {
   const { userId, fecha, hora, paymentId, recurringReservationId, estado = "CONFIRMADO" } = params;
-  const hoy = toDateOnly(new Date());
+  const hoy = hoyEnElEstudio();
 
   if (fecha < hoy) throw Errores.fechaPasada();
   if (await estaBloqueado(tx, fecha)) throw Errores.diaBloqueado();
@@ -329,7 +369,7 @@ export async function modificarDiasPlanMensual(
 
   const patronesActuales = await prisma.recurringReservation.findMany({ where: { paymentId, activo: true } });
   const patronIds = patronesActuales.map((p) => p.id);
-  const hoy = toDateOnly(new Date());
+  const hoy = hoyEnElEstudio();
 
   if (patronIds.length > 0) {
     await prisma.$transaction(
@@ -359,7 +399,7 @@ export async function cancelarTurno(userId: string, appointmentId: string, esAdm
     if (!esAdmin) {
       const horasMinimasCfg = await tx.config.findUnique({ where: { clave: "horas_minimas_cancelacion" } });
       const horasMinimas = horasMinimasCfg ? Number(horasMinimasCfg.valor) : 3;
-      const inicioTurno = new Date(`${turno.fecha.toISOString().slice(0, 10)}T${turno.hora}:00`);
+      const inicioTurno = instanteDelHorario(turno.fecha, turno.hora);
       const horasRestantes = (inicioTurno.getTime() - Date.now()) / 3_600_000;
       if (horasRestantes < horasMinimas) throw Errores.cancelacionFueraDePlazo(horasMinimas);
     }
@@ -472,7 +512,7 @@ function correspondeCreditoPorCancelacion(turno: { estado: string; paymentId: st
  */
 async function crearCreditoPorCancelacion(tx: Tx, userId: string) {
   const planSuelta = await resolverPlanSuelta(tx);
-  const hoy = toDateOnly(new Date());
+  const hoy = hoyEnElEstudio();
   const vencimiento = new Date(hoy);
   vencimiento.setUTCDate(vencimiento.getUTCDate() + DIAS_VALIDEZ_CREDITO);
 
@@ -633,6 +673,18 @@ function finDeMesUTC(fecha: Date): Date {
 }
 
 /**
+ * Si `hoy` cae dentro de los últimos 7 días del mes calendario. Se
+ * usa para adelantar la generación de los turnos de los planes
+ * mensuales al mes siguiente (ver renovarPlanesMensuales) — así el
+ * admin ya puede ver/ofrecer esos lugares antes de que llegue el 1°,
+ * que es cuando corre el cron mensual.
+ */
+export function enUltimaSemanaDelMes(hoy: Date): boolean {
+  const diasEnElMes = finDeMesUTC(hoy).getUTCDate();
+  return hoy.getUTCDate() > diasEnElMes - 7;
+}
+
+/**
  * Renovación automática de los planes mensuales con día fijo: para
  * cada patrón (`RecurringReservation`) activo, genera los turnos del
  * mes en curso que todavía no existan (idempotente — correrla más de
@@ -643,6 +695,11 @@ function finDeMesUTC(fecha: Date): Date {
  * mes. Pensada para correr una vez al principio de cada mes (ver
  * /api/cron/renovar-mensuales).
  *
+ * Si `hoy` ya está en la última semana del mes, además genera de una
+ * vez los turnos del mes SIGUIENTE (no espera al cron del día 1) —
+ * así el admin puede ver y ofrecer esos horarios con anticipación en
+ * vez de tener que esperar a que empiece el mes nuevo.
+ *
  * El sistema NO verifica que el mes esté efectivamente pagado: la
  * clase queda reservada igual, y es tarea del admin detectar el pago
  * por fuera (WhatsApp/efectivo/transferencia) y, si no llega, dar de
@@ -650,10 +707,28 @@ function finDeMesUTC(fecha: Date): Date {
  * lugares en la agenda.
  */
 export async function renovarPlanesMensuales() {
-  const hoy = toDateOnly(new Date());
-  const fin = finDeMesUTC(hoy);
+  const hoy = hoyEnElEstudio();
+  const fin = enUltimaSemanaDelMes(hoy)
+    ? finDeMesUTC(new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, 1)))
+    : finDeMesUTC(hoy);
 
   const patrones = await prisma.recurringReservation.findMany({ where: { activo: true } });
+
+  // Se consultan de una sola vez los turnos que ya existen para estos
+  // patrones en el rango — así el loop de abajo no vuelve a intentar
+  // crear los que ya se generaron en una corrida anterior (algo que
+  // pasa seguido, porque esta función se dispara sola cada vez que el
+  // admin abre el panel en la última semana del mes). Antes, ese
+  // reintento se dejaba pasar vía el unique constraint de la base, lo
+  // cual funcionaba pero llenaba los logs de errores de Prisma.
+  const yaExisten = new Set(
+    (
+      await prisma.appointment.findMany({
+        where: { recurringReservationId: { in: patrones.map((p) => p.id) }, fecha: { gte: hoy, lte: fin } },
+        select: { recurringReservationId: true, fecha: true, hora: true },
+      })
+    ).map((t) => `${t.recurringReservationId}|${t.fecha.toISOString().slice(0, 10)}|${t.hora}`)
+  );
 
   let turnosCreados = 0;
   let turnosOmitidos = 0;
@@ -663,6 +738,12 @@ export async function renovarPlanesMensuales() {
     while (cursor.getUTCDay() !== patron.diaSemana) cursor.setUTCDate(cursor.getUTCDate() + 1);
 
     while (cursor <= fin) {
+      const key = `${patron.id}|${cursor.toISOString().slice(0, 10)}|${patron.hora}`;
+      if (yaExisten.has(key)) {
+        turnosOmitidos++;
+        cursor.setUTCDate(cursor.getUTCDate() + 7);
+        continue;
+      }
       try {
         await conReintentoDeSerializacion(() =>
           prisma.$transaction(
@@ -679,9 +760,9 @@ export async function renovarPlanesMensuales() {
         );
         turnosCreados++;
       } catch {
-        // Ya existía ese turno (renovación repetida en el mismo mes) o
-        // el horario puntual está bloqueado/completo: se lo salta y se
-        // sigue con el resto del mes / del resto de los alumnos.
+        // El horario puntual está bloqueado/completo, o algún otro
+        // conflicto genuino (no "ya existía" — eso ya se filtró
+        // arriba): se lo salta y se sigue con el resto.
         turnosOmitidos++;
       }
       cursor.setUTCDate(cursor.getUTCDate() + 7);
@@ -711,7 +792,7 @@ export async function renovarPlanesMensuales() {
  * que no hay nada que devolver.
  */
 export async function cancelarPlanMensualDeAlumno(userId: string) {
-  const hoy = toDateOnly(new Date());
+  const hoy = hoyEnElEstudio();
 
   const patrones = await prisma.recurringReservation.findMany({ where: { userId, activo: true } });
   if (patrones.length === 0) throw Errores.sinPlanMensualActivo();

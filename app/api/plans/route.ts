@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { logAndWrap } from "@/lib/errors";
-import { toDateOnly } from "@/lib/booking";
+import { hoyEnElEstudio } from "@/lib/booking";
 
 // GET /api/plans -> planes activos para mostrar en "elegir plan"
 export async function GET() {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Ese plan ya no está disponible." }, { status: 404 });
     }
 
-    const inicio = toDateOnly(new Date());
+    const inicio = hoyEnElEstudio();
     const fin = new Date(inicio);
     fin.setUTCDate(fin.getUTCDate() + plan.duracionDias);
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { logAndWrap } from "@/lib/errors";
-import { toDateOnly, marcarClasesPasadasComoCompletadas } from "@/lib/booking";
+import { hoyEnElEstudio, marcarClasesPasadasComoCompletadas, renovarPlanesMensuales, enUltimaSemanaDelMes } from "@/lib/booking";
 import { CUPO_DEFAULT, HORARIOS_BASE } from "@/lib/constants";
 
 // GET /api/admin/stats -> todo lo que necesita el inicio del admin en
@@ -13,7 +13,11 @@ export async function GET() {
   try {
     await requireAdmin();
     await marcarClasesPasadasComoCompletadas();
-    const hoy = toDateOnly(new Date());
+    const hoy = hoyEnElEstudio();
+    // En la última semana del mes, adelantamos la generación de los
+    // turnos del mes siguiente (no esperamos al cron del día 1), así
+    // ya se pueden ver/ofrecer esos horarios con anticipación.
+    if (enUltimaSemanaDelMes(hoy)) await renovarPlanesMensuales();
 
     // Resto de la semana en curso: de hoy al próximo sábado. Si hoy es
     // domingo (el estudio no abre), directamente miramos la semana que

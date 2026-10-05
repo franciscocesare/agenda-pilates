@@ -1,4 +1,5 @@
 "use client";
+import { WhatsAppIcon } from "../../Icons/WhatsAppIcon";
 import ConfirmDialog from "../../ConfirmDialog";
 import type { Usuario } from "./types";
 
@@ -8,6 +9,7 @@ export default function ConfirmPagoMensualDialog({
   vendiendo,
   error,
   onConfirm,
+  onAvisarPorWhatsapp,
   onClose,
 }: {
   usuario: Usuario;
@@ -16,6 +18,8 @@ export default function ConfirmPagoMensualDialog({
   error: string | null;
   /** El admin confirmó que ya recibió el pago: recién ahí se crea el plan. */
   onConfirm: () => void;
+  /** Todavía no está pago: se le avisa por WhatsApp con los días y lo que resta abonar. */
+  onAvisarPorWhatsapp: () => void;
   onClose: () => void;
 }) {
   return (
@@ -41,11 +45,18 @@ export default function ConfirmPagoMensualDialog({
         {vendiendo ? "Guardando…" : "Sí, ya está pago"}
       </button>
       <button
+        onClick={onAvisarPorWhatsapp}
+        disabled={vendiendo}
+        className="mb-2.5 flex w-full items-center justify-center gap-2 rounded-xl2 border-none bg-[#25D366] px-4 py-3.5 text-sm font-bold text-white cursor-pointer"
+      >
+        <WhatsAppIcon size={16} /> Todavía no, avisarle primero
+      </button>
+      <button
         onClick={onClose}
         disabled={vendiendo}
         className="w-full border-none bg-transparent py-1.5 text-[13px] font-semibold text-ink-soft cursor-pointer"
       >
-        Todavía no, avisarle primero
+        Cancelar
       </button>
     </ConfirmDialog>
   );

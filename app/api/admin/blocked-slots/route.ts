@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { cancelarHorarioParaTodos, toDateOnly } from "@/lib/booking";
+import { cancelarHorarioParaTodos, hoyEnElEstudio } from "@/lib/booking";
 import { logAndWrap } from "@/lib/errors";
 
 // GET /api/admin/blocked-slots -> próximos horarios puntuales cancelados
 export async function GET() {
   try {
     await requireAdmin();
-    const hoy = toDateOnly(new Date());
+    const hoy = hoyEnElEstudio();
     const bloqueos = await prisma.blockedSlot.findMany({
       where: { fecha: { gte: hoy } },
       orderBy: [{ fecha: "asc" }, { hora: "asc" }],
