@@ -17,10 +17,10 @@ export default function CancelSlotPanel() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const cargar = async () => {
-    const res = await fetch("/api/admin/blocked-slots");
-    setBloqueos(await res.json());
-  };
+const cargar = async () => {
+  const res = await fetch("/api/admin/blocked-slots");
+  if (res.ok) setBloqueos(await res.json());
+};
 
   useEffect(() => { cargar(); }, []);
 
@@ -52,12 +52,13 @@ export default function CancelSlotPanel() {
   };
 
   return (
-    <div className={`${card} mb-5`}>
-      <p className="m-0 mb-1.5 text-sm font-bold uppercase tracking-wide text-ink-soft">Cancelar un horario puntual</p>
+    <div>
       <p className="m-0 mb-3.5 text-[13px] text-ink-soft">
         Para cuando falta gente en un horario específico de un día, sin cerrar el día entero. Las alumnas con turno en ese horario (confirmado o pendiente de pago) se cancelan automáticamente; si ya se les había descontado el crédito, se les devuelve.
+
       </p>
       <ErrorBanner message={error} />
+
       {aviso && (
         <div className="mb-3.5 rounded-md2 bg-moss-soft px-3 py-2.5 text-[13px] font-semibold text-moss">
           {aviso}

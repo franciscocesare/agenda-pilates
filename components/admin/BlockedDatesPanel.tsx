@@ -19,7 +19,7 @@ export default function BlockedDatesPanel() {
 
   const cargar = async () => {
     const res = await fetch("/api/admin/blocked-dates");
-    setBloqueos(await res.json());
+    if (res.ok) setBloqueos(await res.json());
   };
 
   useEffect(() => {

@@ -12,6 +12,8 @@ import { BRAND } from "@/lib/brand";
 import { WhatsAppIcon } from "../Icons/WhatsAppIcon";
 import AlumnaChip from "../AlumnaChip";
 import ProfilePanel from "../ProfilePanel";
+import CancelSlotPanel from "./CancelSlotPanel";
+import BlockedDatesPanel from "./BlockedDatesPanel";
 
 type PlanMensualInfo = { paymentId: string; nombre: string; clasesPorSemana: number; patrones: { diaSemana: number; hora: string }[] };
 
@@ -31,51 +33,60 @@ const fmtDia = (fecha: string, opts: Intl.DateTimeFormatOptions) =>
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
-// Colores de fondo para el contador de una sección plegable (ej. la
-// cantidad de pendientes de pago), como par [texto, fondo] ya que
-// Tailwind necesita clases completas y no puede construir un color
-// con transparencia agregada en tiempo de ejecución (`color + "22"`).
-const CONTADOR_CLASES: Record<"moss" | "clay", string> = {
-  moss: "text-moss bg-moss-soft",
-  clay: "text-clay-dark bg-clay-soft",
-};
+// Estilos compartidos por todas las secciones plegables (<details>).
+// El navegador se encarga de abrir/cerrar; `group-open:` rota la flecha.
+const SECCION = `${card} group mb-4 overflow-hidden p-0`;
+const SECCION_TITULO = "flex cursor-pointer list-none items-center justify-between px-[18px] py-4 [&::-webkit-details-marker]:hidden";
+const SECCION_NOMBRE = "flex items-center gap-2 text-sm font-bold text-ink";
+const SECCION_FLECHA = "transition-transform duration-150 group-open:rotate-180";
+const SECCION_CUERPO = "px-[18px] pb-[18px]";
 
-/** Sección plegable: el título siempre se ve, el contenido solo si está abierta. */
-function Seccion({
-  titulo, contador, contadorColor = "moss", abierta, onToggle, children,
-}: {
-  titulo: string; contador?: number; contadorColor?: "moss" | "clay"; abierta: boolean; onToggle: () => void; children: React.ReactNode;
-}) {
-  return (
-    <div className={`${card} mb-4 overflow-hidden p-0`}>
-      <button
-        onClick={onToggle}
-        className="flex w-full items-center justify-between border-none bg-transparent px-[18px] py-4 text-left cursor-pointer"
-      >
-        <span className="flex items-center gap-2">
-          <span className="text-sm font-bold text-ink">{titulo}</span>
-          {contador !== undefined && contador > 0 && (
-            <span className={`rounded-full px-2 py-0.5 text-[11.5px] font-bold ${CONTADOR_CLASES[contadorColor]}`}>
-              {contador}
-            </span>
-          )}
-        </span>
-        <ChevronDown size={18} color={palette.inkSoft} className={`transition-transform duration-150 ${abierta ? "rotate-180" : ""}`} />
-      </button>
-      {abierta && <div className="px-[18px] pb-[18px]">{children}</div>}
-    </div>
-  );
-}
+// Cada línea: "Nombre Apellido, Teléfono, Email (opcional)".
+// El apellido y el email son opcionales. Ignora líneas vacías.
+// Admite pegado informal: sin coma entre nombre y teléfono
+// ("Julia +54 9 3516 763769"), con coma final vacía, o teléfono
+// pegado sin espacios. En esos casos separa el teléfono por patrón
+// (un tramo de dígitos/espacios/guiones de al menos 7 caracteres)
+// en vez de depender de la coma.
+const REGEX_TELEFONO = /(\+?\d[\d\s-]{6,}\d)\s*$/;
+const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const parsearAlumnas = (texto: string) =>
+  texto
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((linea) => {
+      let partes = linea
+        .split(",")
+        .map((p) => p.trim())
+        .filter((p, i) => !(i > 0 && p === "")); // ignora una coma final vacía
+
+      if (partes.length === 1) {
+        const match = partes[0].match(REGEX_TELEFONO);
+        if (match) partes = [partes[0].slice(0, match.index).trim(), match[1].trim()];
+      }
+
+      const [nombreCompleto = "", telefono = "", email = ""] = partes;
+      const [nombre, ...resto] = nombreCompleto.split(/\s+/);
+      return {
+        nombre: nombre ?? "",
+        apellido: resto.join(" "),
+        telefono: telefono.trim(),
+        email: REGEX_EMAIL.test(email) ? email : "",
+      };
+    });
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [datos, setDatos] = useState<Inicio | null>(null);
   const [actualizando, setActualizando] = useState<string | null>(null);
-  const [abiertas, setAbiertas] = useState({ pendientes: false, hoy: false, semana: false, alumnosMes: false, contacto: false, importar: false });
+
   const [textoImportar, setTextoImportar] = useState("");
   const [importando, setImportando] = useState(false);
   const [resultadoImportar, setResultadoImportar] = useState<{ creadas: number; duplicadas: string[]; fallidas: { fila: string; motivo: string }[] } | null>(null);
   const [errorImportar, setErrorImportar] = useState<string | null>(null);
+
   const [qContacto, setQContacto] = useState("");
   const resultadosContacto = useBuscarAlumnas(qContacto);
   const [perfilAlumno, setPerfilAlumno] = useState<Alumno | null>(null);
@@ -100,8 +111,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const toggle = (clave: keyof typeof abiertas) => setAbiertas((prev) => ({ ...prev, [clave]: !prev[clave] }));
-
   const cargar = () => {
     fetch("/api/admin/stats").then((r) => r.json()).then(setDatos);
   };
@@ -115,56 +124,22 @@ export default function AdminDashboard() {
     cargar();
   };
 
-  const irAReservasDe = (id: string, nombreCompleto: string) => router.push(`/admin/reservas?userId=${id}&nombre=${encodeURIComponent(nombreCompleto)}`);
-
-  // Cada línea: "Nombre Apellido, Teléfono, Email(opcional)". El
-  // apellido y el email son opcionales (alcanza con "Nombre, Teléfono"
-  // o incluso solo "Nombre" si más adelante se le agrega el teléfono
-  // a mano). Ignora líneas vacías.
-  // Formato ideal: "Nombre Apellido, Teléfono, Email". Pero admite
-  // pegado más informal: sin coma entre nombre y teléfono ("Julia
-  // +54 9 3516 763769"), con coma final vacía ("Julia +54 9..., "),
-  // o teléfono pegado sin espacios — en todos esos casos separa el
-  // teléfono por patrón (un tramo de dígitos/espacios/guiones de al
-  // menos 7 caracteres) en vez de depender de la coma.
-  const REGEX_TELEFONO = /(\+?\d[\d\s-]{6,}\d)\s*$/;
-  const parsearAlumnas = (texto: string) => {
-    return texto
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((linea) => {
-        let partes = linea
-          .split(",")
-          .map((p) => p.trim())
-          .filter((p, i) => !(i > 0 && p === "")); // ignora una coma final vacía
-
-        if (partes.length === 1) {
-          const match = partes[0].match(REGEX_TELEFONO);
-          if (match) {
-            partes = [partes[0].slice(0, match.index).trim(), match[1].trim()];
-          }
-        }
-
-        const [nombreCompleto = "", telefono = "", email = ""] = partes;
-        const [nombre, ...resto] = nombreCompleto.split(/\s+/);
-        const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
-        return { nombre: nombre ?? "", apellido: resto.join(" "), telefono: telefono.trim(), email: emailValido };
-      });
-  };
+  const irAReservasDe = (id: string, nombreCompleto: string) =>
+    router.push(`/admin/reservas?userId=${id}&nombre=${encodeURIComponent(nombreCompleto)}`);
 
   const alumnasAImportar = parsearAlumnas(textoImportar);
-  const alumnasSinTelefono = alumnasAImportar.filter((a) => !a.telefono);
+  const alumnasConTelefono = alumnasAImportar.filter((a) => a.telefono);
+  const alumnasSinTelefono = alumnasAImportar.length - alumnasConTelefono.length;
+  const importarDeshabilitado = importando || alumnasConTelefono.length === 0;
 
   const importarAlumnas = async () => {
     setImportando(true);
     setErrorImportar(null);
     setResultadoImportar(null);
-    const conTelefono = alumnasAImportar.filter((a) => a.telefono);
     const res = await fetch("/api/admin/users/importar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ alumnas: conTelefono }),
+      body: JSON.stringify({ alumnas: alumnasConTelefono }),
     });
     const data = await res.json();
     setImportando(false);
@@ -186,11 +161,24 @@ export default function AdminDashboard() {
         <p className="m-0 text-sm text-ink-soft">Resumen general de {BRAND.nombre}</p>
       </div>
 
-      <Seccion titulo="Pendientes de pago" contador={datos.pendientesDePago.length} contadorColor="clay" abierta={abiertas.pendientes} onToggle={() => toggle("pendientes")}>
-        {datos.pendientesDePago.length === 0 ? (
-          <p className="m-0 text-[13px] text-ink-soft">No hay ninguna clase pendiente de pago.</p>
-        ) : (
-          datos.pendientesDePago.map((p) => {
+      {/* Pendientes de pago */}
+      <details className={SECCION}>
+        <summary className={SECCION_TITULO}>
+          <span className={SECCION_NOMBRE}>
+            Pendientes de pago
+            {datos.pendientesDePago.length > 0 && (
+              <span className="rounded-full bg-clay-soft px-2 py-0.5 text-[11.5px] font-bold text-clay-dark">
+                {datos.pendientesDePago.length}
+              </span>
+            )}
+          </span>
+          <ChevronDown size={18} color={palette.inkSoft} className={SECCION_FLECHA} />
+        </summary>
+        <div className={SECCION_CUERPO}>
+          {datos.pendientesDePago.length === 0 && (
+            <p className="m-0 text-[13px] text-ink-soft">No hay ninguna clase pendiente de pago.</p>
+          )}
+          {datos.pendientesDePago.map((p) => {
             const enCurso = actualizando === p.id;
             const linkWa = buildWaLink(p.user.telefono, mensajeRecordatorioPago(p.user.nombre, fmtDia(p.fecha, { day: "numeric", month: "long" }), p.hora));
             return (
@@ -225,115 +213,142 @@ export default function AdminDashboard() {
                 </div>
               </div>
             );
-          })
-        )}
-      </Seccion>
+          })}
+        </div>
+      </details>
 
-      <Seccion titulo={`Hoy · ${fmtDia(datos.hoy.fecha, { weekday: "long", day: "numeric", month: "long" })}`} abierta={abiertas.hoy} onToggle={() => toggle("hoy")}>
-        {datos.hoy.bloqueado ? (
-          <p className="m-0 text-[13px] text-ink-soft">Hoy está bloqueado — no hay clases.</p>
-        ) : datos.hoy.horarios.length === 0 ? (
-          <p className="m-0 text-[13px] text-ink-soft">Hoy no hay franja horaria configurada.</p>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {datos.hoy.horarios.map((h) => (
-              <div key={h.hora} className="flex items-center gap-2.5">
-                <span className="w-[42px] shrink-0 text-[12.5px] font-bold text-ink-soft">{h.hora}</span>
-                {h.cancelado ? (
-                  <span className="text-[12.5px] font-semibold text-danger">Cancelado</span>
-                ) : h.alumnas.length === 0 ? (
-                  <span className="text-[12.5px] text-ink-soft">Sin alumnas anotadas</span>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {h.alumnas.map((a) => (
-                      <AlumnaChip key={a.id} alumna={a} onClick={() => irAReservasDe(a.id, a.nombreCompleto)} iconSize={11} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+      {/* Hoy */}
+      <details className={SECCION}>
+        <summary className={SECCION_TITULO}>
+          <span className={SECCION_NOMBRE}>
+            Hoy · {fmtDia(datos.hoy.fecha, { weekday: "long", day: "numeric", month: "long" })}
+          </span>
+          <ChevronDown size={18} color={palette.inkSoft} className={SECCION_FLECHA} />
+        </summary>
+        <div className={SECCION_CUERPO}>
+          {datos.hoy.bloqueado ? (
+            <p className="m-0 text-[13px] text-ink-soft">Hoy está bloqueado — no hay clases.</p>
+          ) : datos.hoy.horarios.length === 0 ? (
+            <p className="m-0 text-[13px] text-ink-soft">Hoy no hay franja horaria configurada.</p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {datos.hoy.horarios.map((h) => (
+                <div key={h.hora} className="flex items-center gap-2.5">
+                  <span className="w-[42px] shrink-0 text-[12.5px] font-bold text-ink-soft">{h.hora}</span>
+                  {h.cancelado ? (
+                    <span className="text-[12.5px] font-semibold text-danger">Cancelado</span>
+                  ) : h.alumnas.length === 0 ? (
+                    <span className="text-[12.5px] text-ink-soft">Sin alumnas anotadas</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {h.alumnas.map((a) => (
+                        <AlumnaChip key={a.id} alumna={a} onClick={() => irAReservasDe(a.id, a.nombreCompleto)} iconSize={11} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </details>
+
+      {/* Horarios libres */}
+      <details className={SECCION}>
+        <summary className={SECCION_TITULO}>
+          <span className={SECCION_NOMBRE}>Horarios libres esta semana</span>
+          <ChevronDown size={18} color={palette.inkSoft} className={SECCION_FLECHA} />
+        </summary>
+        <div className={SECCION_CUERPO}>
+          {datos.semana.length === 0 ? (
+            <p className="m-0 text-[13px] text-ink-soft">No hay más días de estudio esta semana.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {datos.semana.map((d) => (
+                <div key={d.fecha}>
+                  <p className="m-0 mb-1.5 text-[12.5px] font-bold capitalize text-moss-dark">
+                    {fmtDia(d.fecha, { weekday: "long", day: "numeric" })}
+                  </p>
+                  {d.bloqueado ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
+                      <CalendarX size={12} /> Bloqueado
+                    </span>
+                  ) : d.horariosLibres.length === 0 ? (
+                    <span className="text-xs text-ink-soft">Completo</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {d.horariosLibres.map((h) => (
+                        <span key={h.hora} className="rounded-full bg-moss-soft px-2.5 py-1 text-xs font-semibold text-moss">
+                          {h.hora} · {h.quedan} libre{h.quedan === 1 ? "" : "s"}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </details>
+
+      {/* Alumnas por mes */}
+      <details className={SECCION}>
+        <summary className={SECCION_TITULO}>
+          <span className={SECCION_NOMBRE}>Alumnas por mes</span>
+          <ChevronDown size={18} color={palette.inkSoft} className={SECCION_FLECHA} />
+        </summary>
+        <div className={SECCION_CUERPO}>
+          <div className="flex gap-3">
+            <div className="flex-1 rounded-md2 bg-moss-soft px-2 py-3.5 text-center">
+              <Users size={16} color={palette.moss} className="mb-1 inline-block" />
+              <p className="my-0.5 text-2xl font-extrabold text-moss-dark">{datos.alumnosMes.actual}</p>
+              <p className="m-0 text-[11.5px] capitalize text-ink-soft">{mesActualNombre} (en curso)</p>
+            </div>
+            <div className="flex-1 rounded-md2 bg-bg px-2 py-3.5 text-center">
+              <Users size={16} color={palette.inkSoft} className="mb-1 inline-block" />
+              <p className="my-0.5 text-2xl font-extrabold text-ink">{datos.alumnosMes.pasado}</p>
+              <p className="m-0 text-[11.5px] capitalize text-ink-soft">{mesPasadoNombre}</p>
+            </div>
           </div>
-        )}
-      </Seccion>
+          <p className="m-0 mt-2.5 text-[11.5px] text-ink-soft">
+            Cuenta alumnas distintas con al menos una clase reservada (no canceladas) en cada mes.
+          </p>
+        </div>
+      </details>
 
-      <Seccion titulo="Horarios libres esta semana" abierta={abiertas.semana} onToggle={() => toggle("semana")}>
-        {datos.semana.length === 0 ? (
-          <p className="m-0 text-[13px] text-ink-soft">No hay más días de estudio esta semana.</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {datos.semana.map((d) => (
-              <div key={d.fecha}>
-                <p className="m-0 mb-1.5 text-[12.5px] font-bold capitalize text-moss-dark">
-                  {fmtDia(d.fecha, { weekday: "long", day: "numeric" })}
+      {/* Contactar alumno */}
+      <details className={SECCION}>
+        <summary className={SECCION_TITULO}>
+          <span className={SECCION_NOMBRE}>Contactar alumno</span>
+          <ChevronDown size={18} color={palette.inkSoft} className={SECCION_FLECHA} />
+        </summary>
+        <div className={SECCION_CUERPO}>
+          <div className="relative mb-2.5">
+            <Search size={16} color={palette.inkSoft} className="absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              className={`${inputStyle} pl-9`}
+              placeholder="Buscar por nombre, email o teléfono…"
+              value={qContacto}
+              onChange={(e) => setQContacto(e.target.value)}
+            />
+          </div>
+          {qContacto.trim().length >= 2 && resultadosContacto.length === 0 && (
+            <p className="m-0 text-[12.5px] text-ink-soft">No encontramos ningún alumno con ese dato.</p>
+          )}
+          <div className="flex flex-col gap-2">
+            {resultadosContacto.map((a) => (
+              <div key={a.id} className="rounded-md2 bg-bg px-3 py-2.5">
+                <p className="m-0 mb-1.5 flex items-center gap-1.5 font-semibold">
+                  {a.nombre} {a.apellido}
+                  <button
+                    onClick={() => abrirPerfilAlumno(a)}
+                    title={`Ver perfil de ${a.nombre} ${a.apellido}`}
+                    className="flex items-center border-none bg-transparent p-0 text-moss cursor-pointer"
+                  >
+                    <UserCircle size={20} />
+                  </button>
                 </p>
-                {d.bloqueado ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
-                    <CalendarX size={12} /> Bloqueado
-                  </span>
-                ) : d.horariosLibres.length === 0 ? (
-                  <span className="text-xs text-ink-soft">Completo</span>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {d.horariosLibres.map((h) => (
-                      <span
-                        key={h.hora}
-                        className="rounded-full bg-moss-soft px-2.5 py-1 text-xs font-semibold text-moss"
-                      >
-                        {h.hora} · {h.quedan} libre{h.quedan === 1 ? "" : "s"}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </Seccion>
-
-      <Seccion titulo="Alumnas por mes" abierta={abiertas.alumnosMes} onToggle={() => toggle("alumnosMes")}>
-        <div className="flex gap-3">
-          <div className="flex-1 rounded-md2 bg-moss-soft px-2 py-3.5 text-center">
-            <Users size={16} color={palette.moss} className="mb-1 inline-block" />
-            <p className="my-0.5 text-2xl font-extrabold text-moss-dark">{datos.alumnosMes.actual}</p>
-            <p className="m-0 text-[11.5px] capitalize text-ink-soft">{mesActualNombre} (en curso)</p>
-          </div>
-          <div className="flex-1 rounded-md2 bg-bg px-2 py-3.5 text-center">
-            <Users size={16} color={palette.inkSoft} className="mb-1 inline-block" />
-            <p className="my-0.5 text-2xl font-extrabold text-ink">{datos.alumnosMes.pasado}</p>
-            <p className="m-0 text-[11.5px] capitalize text-ink-soft">{mesPasadoNombre}</p>
-          </div>
-        </div>
-        <p className="m-0 mt-2.5 text-[11.5px] text-ink-soft">Cuenta alumnas distintas con al menos una clase reservada (no canceladas) en cada mes.</p>
-      </Seccion>
-
-      <Seccion titulo="Contactar alumno" abierta={abiertas.contacto} onToggle={() => toggle("contacto")}>
-        <div className="relative mb-2.5">
-          <Search size={16} color={palette.inkSoft} className="absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            className={`${inputStyle} pl-9`}
-            placeholder="Buscar Alumno o crear uno"
-            value={qContacto}
-            onChange={(e) => setQContacto(e.target.value)}
-          />
-        </div>
-        {qContacto.trim().length >= 2 && resultadosContacto.length === 0 && (
-          <p className="m-0 text-[12.5px] text-ink-soft">No encontramos ningún alumno con ese dato.</p>
-        )}
-        <div className="flex flex-col gap-2">
-          {resultadosContacto.map((a) => {
-            return (
-            <div key={a.id} className="rounded-md2 bg-bg px-3 py-2.5">
-              <p className="m-0 mb-1.5 flex items-center gap-1.5 font-semibold">
-                {a.nombre} {a.apellido}
-                <button
-                  onClick={() => abrirPerfilAlumno(a)}
-                  title={`Ver perfil de ${a.nombre} ${a.apellido}`}
-                  className="flex items-center border-none bg-transparent p-0 text-moss cursor-pointer"
-                >
-                  <UserCircle size={20} />
-                </button>
-              </p>
-              <p className="m-0 mb-1 flex items-center gap-1.5 text-[12.5px] text-ink-soft">
+                <p className="m-0 mb-1 flex items-center gap-1.5 text-[12.5px] text-ink-soft">
                   <Mail size={12} /> {a.email}
                 </p>
                 <p className="m-0 mb-1 flex items-center gap-1.5 text-[12.5px] text-ink-soft">
@@ -348,97 +363,120 @@ export default function AdminDashboard() {
                   <WhatsAppIcon size={12} /> Escribirle por WhatsApp
                 </a>
               </div>
-            );
-          })}
+            ))}
+          </div>
+          {/* perfil del usuario por si admin quiere editar */}
+          {perfilAlumno && (
+            <ProfilePanel
+              sesion={perfilAlumno}
+              contactoNumero={perfilAlumno.telefono}
+              mostrarLogout={false}
+              planMensual={planMensualPerfil}
+              onClose={() => setPerfilAlumno(null)}
+              onActualizado={(datos) => setPerfilAlumno((prev) => (prev ? { ...prev, ...datos } : prev))}
+              onClasesCanceladas={() => { setPerfilAlumno(null); setPlanMensualPerfil(undefined); }}
+              onDiasModificados={() => abrirPerfilAlumno(perfilAlumno)}
+            />
+          )}
         </div>
-        {/* perfil del usuario por si admin quiere editar */}
-        {perfilAlumno && (
-          <ProfilePanel
-            sesion={perfilAlumno}
-            contactoNumero={perfilAlumno.telefono}
-            mostrarLogout={false}
-            planMensual={planMensualPerfil}
-            onClose={() => setPerfilAlumno(null)}
-            onActualizado={(datos) =>
-              setPerfilAlumno((prev) => (prev ? { ...prev, ...datos } : prev))
-            }
-            onClasesCanceladas={() => { setPerfilAlumno(null); setPlanMensualPerfil(undefined); }}
-            onDiasModificados={() => abrirPerfilAlumno(perfilAlumno)}
-          />
-        )}
-      </Seccion>
+      </details>
 
-      <Seccion titulo="Importar alumnas" abierta={abiertas.importar} onToggle={() => toggle("importar")}>
-        <p className="m-0 mb-2.5 text-[12.5px] text-ink-soft">
-          Pegá tu lista, una alumna por línea, así: <strong>Nombre Apellido, Teléfono, Email (opcional)</strong>. El apellido y el email no son obligatorios. Si dos alumnas distintas comparten el mismo teléfono de contacto (ej. dos hermanas), no hay problema. A cada una le queda como contraseña provisoria su propio teléfono — se lo tienen que cambiar antes de poder editar su perfil.
-        </p>
-        <form onSubmit={(e) => { e.preventDefault(); importarAlumnas(); }}>
-          <textarea
-            value={textoImportar}
-            onChange={(e) => { setTextoImportar(e.target.value); setResultadoImportar(null); }}
-            placeholder={"Andrea Caire, +54 9 3516 763769\nBeatriz, +54 9 3546 457211"}
-            rows={8}
-            className={`${inputStyle} mb-2.5 h-auto resize-y font-mono text-[12.5px]`}
-          />
-          {alumnasAImportar.length > 0 && (
-            <div className="mb-2.5 max-h-[240px] overflow-y-auto rounded-md2 border border-line">
-              {alumnasAImportar.map((a, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center justify-between gap-2 px-3 py-2 text-[12.5px] ${i > 0 ? "border-t border-line" : ""} ${
-                    a.telefono ? "" : "bg-danger-soft"
-                  }`}
-                >
-                  <div>
-                    <span className="font-bold">{a.nombre} {a.apellido}</span>{" "}
-                    <span className="text-ink-soft">
-                      {a.telefono || "sin teléfono"}
-                      {a.email ? ` · ${a.email}` : ""}
-                    </span>
-                  </div>
-                  {!a.telefono && <span className="whitespace-nowrap text-xs font-bold text-danger">no se importa</span>}
+      {/* Importar alumnas */}
+      <details className={SECCION}>
+        <summary className={SECCION_TITULO}>
+          <span className={SECCION_NOMBRE}>Importar alumnas</span>
+          <ChevronDown size={18} color={palette.inkSoft} className={SECCION_FLECHA} />
+        </summary>
+        <div className={SECCION_CUERPO}>
+          <p className="m-0 mb-2.5 text-[12.5px] text-ink-soft">
+            Pegá tu lista, una alumna por línea, así: <strong>Nombre Apellido, Teléfono, Email (opcional)</strong>. El apellido y el email no son obligatorios. Si dos alumnas distintas comparten el mismo teléfono de contacto (ej. dos hermanas), no hay problema. A cada una le queda como contraseña provisoria su propio teléfono — se lo tienen que cambiar antes de poder editar su perfil.
+          </p>
+          <form onSubmit={(e) => { e.preventDefault(); importarAlumnas(); }}>
+            <textarea
+              value={textoImportar}
+              onChange={(e) => { setTextoImportar(e.target.value); setResultadoImportar(null); }}
+              placeholder={"Andrea Caire, +54 9 3516 763769\nBeatriz, +54 9 3546 457211"}
+              rows={8}
+              className={`${inputStyle} mb-2.5 h-auto resize-y font-mono text-[12.5px]`}
+            />
+            {alumnasAImportar.length > 0 && (
+              <>
+                <div className="mb-2.5 max-h-[240px] overflow-y-auto rounded-md2 border border-line">
+                  {alumnasAImportar.map((a, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-center justify-between gap-2 px-3 py-2 text-[12.5px] ${i > 0 ? "border-t border-line" : ""} ${a.telefono ? "" : "bg-danger-soft"}`}
+                    >
+                      <div>
+                        <span className="font-bold">{a.nombre} {a.apellido}</span>{" "}
+                        <span className="text-ink-soft">
+                          {a.telefono || "sin teléfono"}
+                          {a.email ? ` · ${a.email}` : ""}
+                        </span>
+                      </div>
+                      {!a.telefono && <span className="whitespace-nowrap text-xs font-bold text-danger">no se importa</span>}
+                    </div>
+                  ))}
                 </div>
-              ))}
+                <p className="m-0 mb-2.5 text-xs text-ink-soft">
+                  {alumnasAImportar.length} línea{alumnasAImportar.length === 1 ? "" : "s"} detectada{alumnasAImportar.length === 1 ? "" : "s"}
+                  {alumnasSinTelefono > 0 && (
+                    <> — <span className="font-bold text-danger">{alumnasSinTelefono} sin teléfono, no se van a importar</span></>
+                  )}
+                </p>
+              </>
+            )}
+            {errorImportar && <p className="m-0 mb-2.5 text-[12.5px] text-danger">{errorImportar}</p>}
+            <button
+              type="submit"
+              disabled={importarDeshabilitado}
+              className={`flex items-center gap-1.5 rounded-md2 border-none bg-moss px-4 py-2.5 text-[13px] font-bold text-white cursor-pointer ${importarDeshabilitado ? "opacity-60" : "opacity-100"}`}
+            >
+              <UserPlus size={15} /> {importando ? "Importando…" : "Importar alumnas"}
+            </button>
+          </form>
+
+          {resultadoImportar && (
+            <div className="mt-3.5 rounded-md2 bg-moss-soft p-3">
+              <p className="m-0 mb-1.5 text-[13px] font-bold text-moss-dark">
+                Se cargaron {resultadoImportar.creadas} alumna{resultadoImportar.creadas === 1 ? "" : "s"}.
+              </p>
+              {resultadoImportar.duplicadas.length > 0 && (
+                <p className="m-0 mb-1 text-xs text-ink-soft">
+                  Ya existían (no se tocaron): {resultadoImportar.duplicadas.join(", ")}
+                </p>
+              )}
+              {resultadoImportar.fallidas.length > 0 && (
+                <p className="m-0 text-xs text-danger">
+                  No se pudieron cargar: {resultadoImportar.fallidas.map((f) => f.fila).join(", ")}
+                </p>
+              )}
             </div>
           )}
-          {alumnasAImportar.length > 0 && (
-            <p className="m-0 mb-2.5 text-xs text-ink-soft">
-              {alumnasAImportar.length} línea{alumnasAImportar.length === 1 ? "" : "s"} detectada{alumnasAImportar.length === 1 ? "" : "s"}
-              {alumnasSinTelefono.length > 0 && (
-                <> — <span className="font-bold text-danger">{alumnasSinTelefono.length} sin teléfono, no se van a importar</span></>
-              )}
-            </p>
-          )}
-          {errorImportar && <p className="m-0 mb-2.5 text-[12.5px] text-danger">{errorImportar}</p>}
-          <button
-            type="submit"
-            disabled={importando || alumnasAImportar.filter((a) => a.telefono).length === 0}
-            className={`flex items-center gap-1.5 rounded-md2 border-none bg-moss px-4 py-2.5 text-[13px] font-bold text-white cursor-pointer ${
-              importando || alumnasAImportar.filter((a) => a.telefono).length === 0 ? "opacity-60" : "opacity-100"
-            }`}
-          >
-            <UserPlus size={15} /> {importando ? "Importando…" : "Importar alumnas"}
-          </button>
-        </form>
+        </div>
+      </details>
 
-        {resultadoImportar && (
-          <div className="mt-3.5 rounded-md2 bg-moss-soft p-3">
-            <p className="m-0 mb-1.5 text-[13px] font-bold text-moss-dark">
-              Se cargaron {resultadoImportar.creadas} alumna{resultadoImportar.creadas === 1 ? "" : "s"}.
-            </p>
-            {resultadoImportar.duplicadas.length > 0 && (
-              <p className="m-0 mb-1 text-xs text-ink-soft">
-                Ya existían (no se tocaron): {resultadoImportar.duplicadas.join(", ")}
-              </p>
-            )}
-            {resultadoImportar.fallidas.length > 0 && (
-              <p className="m-0 text-xs text-danger">
-                No se pudieron cargar: {resultadoImportar.fallidas.map((f) => f.fila).join(", ")}
-              </p>
-            )}
-          </div>
-        )}
-      </Seccion>
+      {/* Cancelar un horario puntual */}
+      <details className={SECCION}>
+        <summary className={SECCION_TITULO}>
+          <span className={SECCION_NOMBRE}>Cancelar un horario puntual</span>
+          <ChevronDown size={18} color={palette.inkSoft} className={SECCION_FLECHA} />
+        </summary>
+        <div className={SECCION_CUERPO}>
+          <CancelSlotPanel />
+        </div>
+      </details>
+
+      {/* Bloquear un día */}
+      <details className={SECCION}>
+        <summary className={SECCION_TITULO}>
+          <span className={SECCION_NOMBRE}>Bloquear un día</span>
+          <ChevronDown size={18} color={palette.inkSoft} className={SECCION_FLECHA} />
+        </summary>
+        <div className={SECCION_CUERPO}>
+          <BlockedDatesPanel />
+        </div>
+      </details>
     </div>
   );
 }

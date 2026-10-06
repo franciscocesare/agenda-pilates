@@ -7,8 +7,6 @@ import MonthGrid, { DiaCalendario } from "../agenda/MonthGrid";
 import { HorarioRow, Referencia, HorarioDia } from "../agenda/HorarioRow";
 import AlumnaChip from "../AlumnaChip";
 import ManualBookingForm from "./ManualBookingForm";
-import BlockedDatesPanel from "./BlockedDatesPanel";
-import CancelSlotPanel from "./CancelSlotPanel";
 
 export default function AdminAgenda() {
   const router = useRouter();
@@ -161,13 +159,10 @@ export default function AdminAgenda() {
       <div className="my-1 mb-3 flex items-center gap-2 text-ink-soft">
         <Clock size={14} />
         <p className="m-0 text-[13px] font-bold">
-          Atención: lunes a sábado, 9 a 13 hs y 15 a 21 hs · 6 lugares por
+          Atención: lunes a sábado, 9 a 13 hs y 15 a 21 hs · 4 lugares por
           horario
         </p>
       </div>
-
-      <CancelSlotPanel />
-      <BlockedDatesPanel />
     </div>
   );
 }
