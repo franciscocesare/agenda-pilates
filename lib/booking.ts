@@ -178,6 +178,17 @@ async function reservarEnTransaccion(
   const reservados = await contarReservasDelHorario(tx, fecha, hora);
   if (reservados >= CUPO_DEFAULT) throw Errores.diaCompleto();
 
+  // Si la alumna ya tuvo un turno CANCELADO en ese mismo horario (ej.
+  // se lo cambió de día y después se lo devuelve), la restricción
+  // única (fecha, hora, userId) impide crear otra fila: se reactiva la
+  // existente en vez de fallar.
+  if (yaTiene && yaTiene.estado === "CANCELADO") {
+    return tx.appointment.update({
+      where: { id: yaTiene.id },
+      data: { estado, paymentId, recurringReservationId },
+    });
+  }
+
   return tx.appointment.create({
     data: { userId, fecha, hora, paymentId, recurringReservationId, estado },
   });
@@ -252,7 +263,16 @@ async function fijarUnDiaMensual(userId: string, paymentId: string, diaSemana: n
   if (payment.planType.tipo !== "MENSUAL") throw Errores.planNoMensual();
 
   const fechas: Date[] = [];
-  const cursor = toDateOnly(payment.periodoInicio);
+  // El rango arranca en el más tardío entre el inicio del pago y HOY.
+  // Antes arrancaba siempre en periodoInicio, y el fin de mes se
+  // calculaba a partir de ahí: si el pago había empezado en un mes
+  // anterior (planes que se renuevan mes a mes conservan su
+  // periodoInicio original), `fin` caía en el pasado y no se generaba
+  // ningún turno nuevo — el cambio de días quedaba guardado en el
+  // detalle de la alumna, pero la agenda no mostraba nada.
+  const hoy = hoyEnElEstudio();
+  const inicioPago = toDateOnly(payment.periodoInicio);
+  const cursor = new Date(inicioPago > hoy ? inicioPago : hoy);
   // Ojo: acá NO se usa payment.periodoFin (que son ~30 días corridos
   // desde que se vendió el plan y puede meterse en el mes siguiente).
   // Los turnos de "fijar el día" se generan solo hasta fin del mes
