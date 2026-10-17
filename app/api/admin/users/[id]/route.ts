@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { AppError, logAndWrap } from "@/lib/errors";
@@ -7,7 +7,14 @@ import { AppError, logAndWrap } from "@/lib/errors";
 const schema = z.object({
   nombre: z.string().min(1).optional(),
   apellido: z.string().min(1).optional(),
-  email: z.string().email().optional(),
+  // El formulario manda siempre los 4 campos: si la persona no tiene
+  // email, llega "" (string vacío), que `.email()` rechaza. Un vacío se
+  // trata como "sin cambios" (undefined), así se puede editar el
+  // apellido de alguien sin email sin que reviente la validación.
+  email: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : typeof v === "string" ? v.trim() : v),
+    z.string().email().optional()
+  ),
   telefono: z.string().min(6).optional(),
 });
 
@@ -68,6 +75,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       telefono: actualizado.telefono,
     });
   } catch (err) {
+    if (err instanceof ZodError) {
+      const campos = err.issues.map((i) => String(i.path[0]));
+      const msg = campos.includes("email")
+        ? "El email no es válido."
+        : campos.includes("telefono")
+        ? "El teléfono tiene que tener al menos 6 caracteres."
+        : "Revisá que nombre y apellido no estén vacíos.";
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
     const e = logAndWrap(err, "No pudimos guardar los cambios del perfil.");
     return NextResponse.json({ error: e.userMessage }, { status: e.status });
   }
